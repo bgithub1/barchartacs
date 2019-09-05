@@ -1,7 +1,7 @@
 '''
 Created on Jun 29, 2019
 
-create and instan of pg_pandas.PgPandas using a csv file with postgres config info 
+create and instance of pg_pandas.PgPandas using a csv file with postgres config info 
     
 
 @author: bperlman1

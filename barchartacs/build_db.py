@@ -10,14 +10,8 @@ build_db.py helps create the DataFrames that you use to
     but use the options_table_loader.ipynb jupyter notebook instead.
     
     
-@author:     user_name
+@author:     bill perlman
 
-@copyright:  2019 organization_name. All rights reserved.
-
-@license:    license
-
-@contact:    user_email
-@deffield    updated: Updated
 '''
 
 import zipfile
