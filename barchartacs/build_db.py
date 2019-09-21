@@ -79,6 +79,7 @@ class BuildDb():
     def __init__(self,zip_folder_parent,
                  yyyymm=None,
                  strike_divisor = None,
+                 strike_divisor_dict=None,
                  unzip_folder=None,
                  zipname_first_part=None,
                  options_table_name=None,
@@ -91,11 +92,12 @@ class BuildDb():
                  recreate_schema=False,
                  recreate_tables=False,
                  contract_list = None,
-                 write_to_database=True,
+                 write_to_database=False,
                  logger = None
                  ):
         
         self.yyyymm = yyyymm
+        self.strike_divisor_dict = {'GE':100,'NG':100} if strike_divisor_dict is None else strike_divisor_dict
         self.strike_divisor = 1 if strike_divisor is None else strike_divisor
         self.recreate_schema = recreate_schema
         self.recreate_tables = recreate_tables
@@ -149,6 +151,14 @@ class BuildDb():
         self.regex_options_csv_pattern = 'opv[01][0-9][0-3][0-9][0-9].[cC][sS][vV]'
         self.glob_options_csv_pattern = f'{self.unzip_folder}/opv*.[cC][sS][vV]'
         
+    
+    def get_strike_divisor(self,contract):
+        if self.strike_divisor_dict is None:
+            return self.strike_divisor
+        commod = contract[:2]
+        if commod not in self.strike_divisor_dict.keys():
+            return self.strike_divisor
+        return self.strike_divisor_dict[commod]
         
     def get_csv_files_from_yyyymm(self,yyyymm):
         mm = str(yyyymm)[4:6]
@@ -249,14 +259,20 @@ class BuildDb():
         df = pd.read_csv(s2)
         return df
     
+    def _make_strikes(self,row):
+        divisor = self.get_strike_divisor(row.contract)
+        strike = float(row.strike_right[0:-1])
+        return strike/divisor
+
     def build_options_pg_from_csvs(self,options_csv_path):
         try:
             p = options_csv_path
             df_temp = self._df_from_text(p)
             df_temp = df_temp[df_temp.contract.isin(self.contract_list)]
             symbols = df_temp.contract + df_temp.month_year.str.slice(0,1)  + df_temp.month_year.str.slice(3,5)
-            strikes = df_temp.strike_right.str.slice(0,-1).astype(float)
-            strikes = strikes / self.strike_divisor
+#             strikes = df_temp.strike_right.str.slice(0,-1).astype(float)
+#             strikes = strikes / self.strike_divisor            
+            strikes = df_temp.apply(self._make_strikes,axis=1)
             pcs = df_temp.strike_right.str.slice(-1,)
             settle_dates = (df_temp.date.astype(str).str.slice(6,10) + df_temp.date.astype(str).str.slice(0,2) + df_temp.date.astype(str).str.slice(3,5)).astype(int)
             opens = df_temp.open.astype(float)
@@ -290,8 +306,9 @@ class BuildDb():
                 df_temp = self._df_from_text(p)
                 df_temp = df_temp[df_temp.contract.isin(self.contract_list)]
                 symbols = df_temp.contract + df_temp.month_year.str.slice(0,1)  + df_temp.month_year.str.slice(3,5)
-                strikes = df_temp.strike_right.str.slice(0,-1).astype(float)
-                strikes = strikes / self.strike_divisor
+#                 strikes = df_temp.strike_right.str.slice(0,-1).astype(float)
+#                 strikes = strikes / self.strike_divisor            
+                strikes = df_temp.apply(self._make_strikes,axis=1)
                 pcs = df_temp.strike_right.str.slice(-1,)
                 settle_dates = (df_temp.date.astype(str).str.slice(6,10) + df_temp.date.astype(str).str.slice(0,2) + df_temp.date.astype(str).str.slice(3,5)).astype(int)
                 opens = df_temp.open.astype(float)
@@ -431,6 +448,7 @@ USAGE
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
         parser.add_argument('--yyyymm',help='year month day string for day that you want to unzip and build',nargs='?')
+        parser.add_argument('--commod_list',help='list of commodity contracts - separated by commas - like CL,CB,ES,GE that you want to process',nargs='?')
         parser.add_argument('--zip_folder_parent',help='top level folder that holds ACS zip files')
         parser.add_argument('--recreate_schema',help='recreate the schema for the options and underlying tables',default=False)
         parser.add_argument('--recreate_tables',help='recreate the options and underlying tables',default=False)
@@ -449,6 +467,9 @@ USAGE
         parser.add_argument('--password',type=str,
                         help='password (None will be blank)',
                         nargs='?')
+        parser.add_argument('--csv_save_path',type=str,
+                        help='path to use to write final dataframe to a csv file (None will be no write)',
+                        nargs='?')
 
         # Process arguments
         args = parser.parse_args()
@@ -457,8 +478,16 @@ USAGE
 
 
         yyyymm = args.yyyymm
+        commod_list_string = args.commod_list
+        if commod_list_string is not None:
+            if "," in commod_list_string:
+                commod_list = commod_list_string.split(',')
+            else:
+                commod_list = [commod_list_string]
         zip_folder_parent = args.zip_folder_parent
-        bdb = BuildDb(zip_folder_parent,yyyymm,
+        bdb = BuildDb(zip_folder_parent,
+                      yyyymm=yyyymm,
+                      contract_list=commod_list,
                       dburl=args.dburl,
                       databasename=args.databasename,
                       schema_name=args.schema_name,
@@ -466,8 +495,11 @@ USAGE
                       password=args.password,
                       recreate_schema=args.recreate_schema,
                       recreate_tables=args.recreate_tables)
-        bdb.execute()
-                
+        df_all = bdb.execute()
+        save_path = args.csv_save_path
+        if save_path is not None:
+            df_all.to_csv(save_path,index=False)
+            
         return 0
     except KeyboardInterrupt:
         ### handle keyboard interrupt ###
