@@ -5,3 +5,8 @@ fnames.csv
 temp*.csv
 *.pyc
 .ipynb_checkpoints
+.settings
+.DS_Store
+.pydevproject
+.project
+

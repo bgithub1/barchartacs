@@ -67,6 +67,7 @@ def init_root_logger(logfile,logging_level=None):
     logger.addHandler(fh)
     logger.addHandler(ch)   
     return logger
+
 if __name__ == '__main__':
     parser =  ap.ArgumentParser()
     parser.add_argument('--acs_username',type=str,
