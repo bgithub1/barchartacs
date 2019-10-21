@@ -41,6 +41,8 @@ import traceback
 from tqdm import tqdm
 import numpy as np
 import logging
+import re
+
 
 def init_root_logger(logfile,logging_level=None):
     level = logging_level
@@ -126,7 +128,8 @@ if __name__ == '__main__':
     YY_LIST = list(np.arange(BEGIN_YY,END_YY+1))
     MMMYY_LIST = [mmm + str(yy) for mmm in MMM_LIST for yy in YY_LIST]
     ACS_HOME_PAGE = 'http://acs.barchart.com/mri/mripag.htm' 
-    ACS_FUTURES_PAGE = 'http://acs.barchart.com/mri/mridta.htm'
+#     ACS_FUTURES_PAGE = 'http://acs.barchart.com/mri/mridta.htm'
+    ACS_FUTURES_PAGE = 'http://acs.barchart.com/mri/mrgfutz.htm'
     ACS_OPTIONS_PAGE = 'http://acs.barchart.com/mri/mriopt.htm'
     
     '''
@@ -183,9 +186,6 @@ if __name__ == '__main__':
     Download the zip files into their appropriate folders.
     '''
     
-    # In[11]:
-    
-    
     options_parent = ZIP_FOLDER_PARENT+'/options'
     if not os.path.isdir(options_parent):
         print(f'making options folder {options_parent}')
@@ -221,4 +221,67 @@ if __name__ == '__main__':
     
     sela.driver.quit()        
     
+    '''
+    ************************ Step 9:  Setup Folders for Futures Download ****************
+    '''
+    futures_parent = ZIP_FOLDER_PARENT+'/futures'
+    if not os.path.isdir(futures_parent):
+        print(f'making futures folder {futures_parent}')
+        os.mkdir(futures_parent)
+    else:
+        print(f'futures folder {futures_parent} already exists')
 
+
+    '''
+    ************************ Step 10:  Instantiate a new SelScrape ****************
+    '''
+    sela = sc.SelScrape(headless=False)
+    sela.goto(ACS_HOME_PAGE)
+    time.sleep(1)
+    wait(sela.driver, 5).until(EC.alert_is_present())
+    alert = sela.driver.switch_to_alert()
+    alert.send_keys(f'{ACS_USERNAME}{Keys.TAB}{ACS_PASSWORD}')
+    time.sleep(3)
+    alert.accept()
+
+    '''
+    ************************ Step 11:  Execute the Download of Monthly Futures zip files ****************
+    '''
+    sela.goto(ACS_FUTURES_PAGE)
+    monthly_csv_files_xpath = "//td/a[contains(@href,'data/mrg/mrg')]"
+    mcsv_elements = sela.findxpath(monthly_csv_files_xpath)['value']
+    mcsv_hrefs_all = []
+    for mcsv in mcsv_elements:
+        mcsv_hrefs_all.append(mcsv.get_attribute('href'))
+    all_years = np.arange(BEGIN_YY,END_YY+1)
+    mcsv_hrefs = [h for h in mcsv_hrefs_all if int(re.findall('[0-9]{1,2}',h)[0]) in all_years]    
+    
+    hrefs_to_unzip = []
+    paths_to_unzip_to = []
+    for mcsv_href in mcsv_hrefs:
+        zip_file_name = mcsv_href.split('/')[-1]
+        path_to_zip_file = f'{futures_parent}/{zip_file_name}'
+        if not os.path.isfile(path_to_zip_file):
+            hrefs_to_unzip.append(mcsv_href)
+            paths_to_unzip_to.append(path_to_zip_file)
+            
+    successful_downloads = []
+    for i in tqdm(range(len(mcsv_hrefs))):
+        try:    
+            url = hrefs_to_unzip[i]
+            r=requests.get(url, auth=HTTPBasicAuth(ACS_USERNAME, ACS_PASSWORD))
+            p = paths_to_unzip_to[i]
+            with open(p, 'wb') as f:
+                f.write(r.content)
+            successful_downloads.append(path_to_zip_file)
+        except Exception as e:
+            traceback.print_exc()
+            
+            
+    sela.driver.quit() 
+    
+    '''
+    ************************ END ****************
+    '''
+           
+        
