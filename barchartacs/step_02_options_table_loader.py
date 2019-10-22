@@ -15,21 +15,26 @@ Options and futures daily settlement data is written to a Postgres database with
  
  
 Usage:
-1. Set commodities to update in sec_db database
-```
-CONTRACT_LIST = ['CL','CB','ES']
-```
-2. If performing an update of the sec_db database for a single month, set the variable `SINGLE_YYYYMM` to a value like `201909` in the second cell below.  Also, set `WRITE_TO_POSTGRES` to `True`
-```
-SINGLE_YYYYMM = 201909
-WRITE_TO_POSTGRES = True
-```
-3. If performing an update on multiple months, set the variables `BEGIN_YEAR` and `END_YEAR` to values like `2011` and `2020` in the second cell below.  Also, set `WRITE_TO_POSTGRES` to `False`
-```
-BEGIN_YEAR = 2011
-END_YEAR = 2019
-WRITE_TO_POSTGRES = False
-```
+CASE 1:
+if NOT writing to Postgres database:
+source myvirtualenvironment/bin/activate
+python3 step_02_options_table_loader.py --zip_folder_parent temp_folder/zip_files  --begin_yyyy 2016 --end_yyyy 2019
+
+CASE 2:
+if WRITING to Postgres database with no database username or password:
+source myvirtualenvironment/bin/activate
+python3 step_02_options_table_loader.py --write_to_postgres True --zip_folder_parent temp_folder/zip_files  --begin_yyyy 2016 --end_yyyy 2019
+
+CASE 3:
+if WRITING to Postgres database With db username and password:
+source myvirtualenvironment/bin/activate
+python3 step_02_options_table_loader.py --write_to_postgres True --zip_folder_parent temp_folder/zip_files  --begin_yyyy 2016 --end_yyyy 2019 --db_username db_username --db_password db_password
+
+CASE 4:
+if WRITING to Postgres database With db username and password BUT ONLY ONE yyyymm
+source myvirtualenvironment/bin/activate
+python3 step_02_options_table_loader.py --write_to_postgres True --zip_folder_parent temp_folder/zip_files  --single_yyyymm 201908 --db_username db_username --db_password db_password
+
  
 '''
 
@@ -42,7 +47,6 @@ if  not '../' in sys.path:
     sys.path.append('../')
 
 from barchartacs import build_db
-import datetime
 from tqdm import tqdm
 import logging
 import argparse as ap
@@ -84,6 +88,9 @@ if __name__ == '__main__':
     parser.add_argument('--log_file_path',type=str,
                         help='path to log file. Default = logfile.log',
                         default = 'logfile.log')
+    parser.add_argument('--logging_level',type=str,
+                        help='log level.  Default = INFO',
+                        default = 'INFO')
     parser.add_argument('--zip_folder_parent',type=str,
                         help='full folder path into which you will download zip files')    
     parser.add_argument('--single_yyyymm',type=int,
@@ -95,8 +102,9 @@ if __name__ == '__main__':
     parser.add_argument('--end_yyyy',type=int,
                         help='if single_yyyymm is NOT specified the last year of options and futures data to upload to DB (like 2012 or 2016)',
                         nargs="?")
-    parser.add_argument('--write_to_postgres',type=bool,
-                        help='if --write_to_postgres appears on the command line, the data will be written to postgres.  Otherwise, a psql COPY command will be printed to the console',)
+    parser.add_argument('--write_to_postgres',type=str,
+                        help='if True the data will be written to postgres.  Otherwise, a psql COPY command will be printed to the console.  Default=False',
+                        default="False")
     parser.add_argument('--db_username',type=str,
                         help='username in Postgres login',
                         default = 'logfile.log')
@@ -111,9 +119,6 @@ if __name__ == '__main__':
                         default = './divisor_dict.json')
     parser.add_argument('--show_browser',type=bool,
                         help='if --show_browser is on the command line, then the browser will be shown during scraping')
-    parser.add_argument('--logging_level',type=str,
-                        help='log level.  Default = INFO',
-                        default = 'INFO')
     args = parser.parse_args()
     
     '''
@@ -126,7 +131,7 @@ if __name__ == '__main__':
     
 
     SINGLE_YYYYMM = args.single_yyyymm
-    WRITE_TO_POSTGRES = True if args.write_to_postgres else False
+    WRITE_TO_POSTGRES = args.write_to_postgres.lower() == 'true'
     CONTRACT_LIST = args.contract_list.split(',')
     STRIKE_DIVISOR_DICT = json.load(open(args.strike_divisor_json_path,'r'))
     BEGIN_YEAR = args.begin_yyyy

@@ -1,20 +1,11 @@
 '''
 ************************ Overview ************************
-This workbook automates the download of monthly options and futures pricing 
+This workbook automates the download of options and futures daily pricing 
   zip files from Barchart ACS.
 
-1. It will use Selenium to login to the site: 
-
-    ACS_HOME_PAGE = 'http://acs.barchart.com/mri/mripag.htm' 
-    ACS_LOGIN_INFO = './temp_folder/acs_login.txt'
-    acs_text = open(ACS_LOGIN_INFO,'r').read()
-    ACS_USERNAME = acs_text.split(',')[0]
-    ACS_PASSWORD = acs_text.split(',')[1]
-
+1. It will use Selenium to login to the Barchart ACS site; 
 2. It will scrape the urls of the zip files, and then download those zipfiles into a folder which is specified using:
-    ZIP_FOLDER_PARENT = open('./temp_folder/zip_folder_parent.txt','r').read()
- 
-3. You can manually upload one or several months after manuall logging in to Barchartacs at http://acs.barchart.com/mri/mriopt.htm.  Navigate down the page to the table **Monthly Options Zip Files** and then click on a CSV file that you want to download
+    folder (specified by the command line argumet zip_folder_parent)
  
 ************************ Usage ************************
 python3 step_01_download_monthly_acs_files.py --acs_username myusername \
