@@ -157,7 +157,7 @@ if __name__ == '__main__':
             psql_cmd = f'psql  -d sec_db -c "CMD"'
         psql_cmd = psql_cmd.replace('CMD',copy_cmd)
         if  WRITE_TO_POSTGRES:  # double check !!!
-            logger.info(f'BEGIN executing psql COPY command')
+            logger.info(f'BEGIN executing psql COPY command: {psql_cmd}')
             os.system(psql_cmd)
             logger.info(f'END executing psql COPY command')
         else:

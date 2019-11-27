@@ -71,6 +71,9 @@ if __name__ == '__main__':
                         help='2 character year like 11 for 2011 or 23 for 2023 for first year of options zip files to download from barchart')
     parser.add_argument('--end_yy',type=int,
                         help='2 character year like 11 for 2011 or 23 for 2023 for last year of options zip files to download from barchart')
+    parser.add_argument('--month_list',type=str,
+                        help='comma separated list (NO SPACES) of 3 character months like jan,feb,mar.  Omit to do all months for each year.',
+                        default="")
     parser.add_argument('--log_file_path',type=str,
                         help='path to log file. Default = logfile.log',
                         default = 'logfile.log')
@@ -103,6 +106,7 @@ if __name__ == '__main__':
     END_YY = args.end_yy
     ACS_USERNAME = args.acs_username
     ACS_PASSWORD = args.acs_password
+    month_list = args.month_list
     
     log_file_path = args.log_file_path
     logging_level = args.logging_level
@@ -117,6 +121,9 @@ if __name__ == '__main__':
     The constants below should be left as is - DO NOT CHANGE.
     '''
     MMM_LIST = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+    if month_list is not None and len(month_list)>0:
+        MMM_LIST = month_list.replace(" ","").split(",")
+    logger.info(f"using month list {MMM_LIST}")
     YY_LIST = list(np.arange(BEGIN_YY,END_YY+1))
     MMMYY_LIST = [mmm + str(yy) for mmm in MMM_LIST for yy in YY_LIST]
     ACS_HOME_PAGE = 'http://acs.barchart.com/mri/mripag.htm' 
@@ -180,10 +187,10 @@ if __name__ == '__main__':
     
     options_parent = ZIP_FOLDER_PARENT+'/options'
     if not os.path.isdir(options_parent):
-        print(f'making options folder {options_parent}')
+        logger.info(f'making options folder {options_parent}')
         os.mkdir(options_parent)
     else:
-        print(f'options folder {options_parent} already exists')
+        logger.info(f'options folder {options_parent} already exists')
     hrefs_to_unzip = []
     paths_to_unzip_to = []
     for mcsv_href in mcsv_hrefs:
@@ -191,7 +198,7 @@ if __name__ == '__main__':
         folder_name = zip_file_name.replace('.zip','')
         path_to_zip_folder = f'{options_parent}/{folder_name}'
         if not os.path.isdir(path_to_zip_folder):
-            print(f'making {path_to_zip_folder}')
+            logger.info(f'making {path_to_zip_folder}')
             os.mkdir(path_to_zip_folder)
         path_to_zip_file = f'{path_to_zip_folder}/{zip_file_name}'
         if not os.path.isfile(path_to_zip_file):
@@ -218,16 +225,16 @@ if __name__ == '__main__':
     '''
     futures_parent = ZIP_FOLDER_PARENT+'/futures'
     if not os.path.isdir(futures_parent):
-        print(f'making futures folder {futures_parent}')
+        logger.info(f'making futures folder {futures_parent}')
         os.mkdir(futures_parent)
     else:
-        print(f'futures folder {futures_parent} already exists')
+        logger.info(f'futures folder {futures_parent} already exists')
 
 
     '''
     ************************ Step 10:  Instantiate a new SelScrape ****************
     '''
-    sela = sc.SelScrape(headless=False)
+    sela = sc.SelScrape(headless=headless)
     sela.goto(ACS_HOME_PAGE)
     time.sleep(1)
     wait(sela.driver, 5).until(EC.alert_is_present())
@@ -246,7 +253,7 @@ if __name__ == '__main__':
     for mcsv in mcsv_elements:
         mcsv_hrefs_all.append(mcsv.get_attribute('href'))
     all_years = np.arange(BEGIN_YY,END_YY+1)
-    mcsv_hrefs = [h for h in mcsv_hrefs_all if int(re.findall('[0-9]{1,2}',h)[0]) in all_years]    
+    mcsv_hrefs = [h for h in mcsv_hrefs_all if (int(re.findall('[0-9]{1,2}',h)[0]) in all_years) and  (is_valid_yyymm(h))]    
     
     hrefs_to_unzip = []
     paths_to_unzip_to = []
@@ -258,7 +265,7 @@ if __name__ == '__main__':
             paths_to_unzip_to.append(path_to_zip_file)
             
     successful_downloads = []
-    for i in tqdm(range(len(mcsv_hrefs))):
+    for i in tqdm(range(len(hrefs_to_unzip))):
         try:    
             url = hrefs_to_unzip[i]
             r=requests.get(url, auth=HTTPBasicAuth(ACS_USERNAME, ACS_PASSWORD))
