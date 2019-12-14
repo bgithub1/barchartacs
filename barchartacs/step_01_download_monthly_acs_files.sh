@@ -12,6 +12,7 @@ zip_folder_parent=${5}
 virtualenv_folder=${6}
 month_list="${7}"
 
+echo parameters are: ${acs_username} ${acs_password} ${begin_yy} ${end_yy} ${zip_folder_parent} ${virtualenv_folder} ${month_list}
 if [[ -z ${zip_folder_parent} ]]
 then
     zip_folder_parent="./temp_folder/zip_files"
@@ -22,11 +23,10 @@ then
     virtualenv_folder="~/Virtualenvs3/dashrisk2"
 fi
 
-month_list_args=""
-if [[ ! -z ${month_list} ]]
+if [[ -z ${month_list} ]]
 then
-    month_list_args="--month_list ${month_list}"
+    month_list="jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec"
 fi
 
 source ${virtualenv_folder}/bin/activate
-echo python3 step_01_download_monthly_acs_files.py --acs_username ${acs_username} --acs_password ${acs_password} --begin_yy ${begin_yy}  --end_yy ${end_yy} --zip_folder_parent ${zip_folder_parent} "${month_list_args}"
+python3 step_01_download_monthly_acs_files.py --acs_username ${acs_username} --acs_password ${acs_password} --begin_yy ${begin_yy}  --end_yy ${end_yy} --zip_folder_parent ${zip_folder_parent} --month_list ${month_list}

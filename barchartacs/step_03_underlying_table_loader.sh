@@ -1,12 +1,15 @@
 # run step_03_underlying_table_loader.py from the command line
 #
-# example with postgres username and password, multiple years:
-# $ bash step_03_underlying_table_loader.sh 2016 2019 zip_folder_parent True virtualenv_folder db_username db_password 
+# example with postgres username and password, multiple years, using the "local" config in postgres_info.csv::
+# $ bash step_03_underlying_table_loader.sh 2016 2019 zip_folder_parent True virtualenv_folder local 
+#
+# example with postgres username and password, single year and 2 months (oct,nov), using the "local" config in postgres_info.csv::
+# $ bash step_03_underlying_table_loader.sh 2019 2019 zip_folder_parent True virtualenv_folder local "oct,nov"
 #
 # example DON'T write to postgres, only creating csv file for multiple years which 
 #    will be uploaded using the psql COPY command that get's printed at 
-#    the end of the run)
-# $ bash step_03_underlying_table_loader.sh 2016 2019 zip_folder_parent False virtualenv_folder db_username db_password 
+#    the end of the run), using the "aws_lightsail" config in postgres_info.csv:
+# $ bash step_03_underlying_table_loader.sh 2016 2019 zip_folder_parent False virtualenv_folder aws_lightsail 
 #
 
 begin_yyyy=${1}
@@ -14,8 +17,8 @@ end_yyyy=${2}
 zip_folder_parent=${3}
 write_to_postgres=${4}
 virtualenv_folder=${5}
-db_username=${6}
-db_password=${7}
+config_name=${6}
+months_to_include="${7}"
 
 
 if [[ -z ${write_to_postgres} ]]
@@ -28,12 +31,17 @@ then
     virtualenv_folder="~/Virtualenvs3/dashrisk2"
 fi
 
+if [[ -z ${months_to_include} ]]
+then
+    months_to_include="jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec"
+fi
+
+if [[ -z ${config_name} ]]
+then
+    config_name="local"
+fi
+
 source ${virtualenv_folder}/bin/activate
 
-if [[ -z ${db_username} ]]
-then
-    python3 step_03_underlying_table_loader.py --write_to_postgres ${write_to_postgres} --zip_folder_parent ${zip_folder_parent}  --begin_yyyy ${begin_yyyy} --end_yyyy ${end_yyyy}
-else
-    python3 step_03_underlying_table_loader.py --write_to_postgres ${write_to_postgres} --zip_folder_parent ${zip_folder_parent}  --begin_yyyy ${begin_yyyy} --end_yyyy ${end_yyyy}  --db_username ${db_username} --db_password ${db_password} 
-fi
+python3 step_03_underlying_table_loader.py --write_to_postgres ${write_to_postgres} --zip_folder_parent ${zip_folder_parent}  --begin_yyyy ${begin_yyyy} --end_yyyy ${end_yyyy} --config_name ${config_name}  --months_to_include ${months_to_include}
 

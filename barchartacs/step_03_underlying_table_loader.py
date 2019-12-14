@@ -29,6 +29,7 @@ p = '../'
 if  not os.path.abspath(p) in sys.path:
     sys.path.append(os.path.abspath(p))
 
+from barchartacs import db_info
 import argparse as ap
 import datetime
 from tqdm import tqdm
@@ -97,18 +98,23 @@ if __name__=='__main__':
     parser.add_argument('--write_to_postgres',type=str,
                         help='if True the data will be written to postgres.  Otherwise, a psql COPY command will be printed to the console.  Default=False',
                         default="False")
-    parser.add_argument('--db_username',type=str,
-                        help='username in Postgres login',
-                        nargs="?")
-    parser.add_argument('--db_password',type=str,
-                        help='password in Postgres login',
-                        nargs="?")
+#     parser.add_argument('--db_username',type=str,
+#                         help='username in Postgres login',
+#                         nargs="?")
+#     parser.add_argument('--db_password',type=str,
+#                         help='password in Postgres login',
+#                         nargs="?")
+    parser.add_argument('--db_config_csv_path',type=str,
+                        help='path to the csv file that holds config_name,dburl,databasename,username,password info for the postgres db that you will update (default is ./postgres_info.csv',
+                        default="./postgres_info.csv")
+    parser.add_argument('--config_name',type=str,
+                        help='value of the config_name column in the db config csv file (default is local',
+                        default="local")
     parser.add_argument('--contract_list',type=str,
                         help='a comma delimited string of commodity codes.  Default = CL,CB,ES',
                         default = 'CL,CB,ES')
 
     args = parser.parse_args()
-    
     
     '''
     ************************** Step 1:  get arguments from argparse variables **************************
@@ -117,6 +123,7 @@ if __name__=='__main__':
     logging_level = args.logging_level
     logger = init_root_logger(log_file_path, logging_level)
     
+    logger.info(str(args))
     
 
     WRITE_TO_POSTGRES = args.write_to_postgres.lower() == 'true'
@@ -127,8 +134,9 @@ if __name__=='__main__':
     END_YEAR = args.end_yyyy
     if len(str(END_YEAR))<=2:
         END_YEAR +=2000
-    DB_USER_NAME = args.db_username
-    DB_PASSWORD = args.db_password
+
+
+
     WRITE_DATA=args.write_to_postgres # set to True if you want to copy new data to postgres using psql copy 
     ZIP_FOLDER_PARENT = args.zip_folder_parent 
     BEGIN_YY = int(str(BEGIN_YEAR)[-2:])
@@ -145,6 +153,12 @@ if __name__=='__main__':
     SCHEMA_NAME = 'sec_schema'
     UNDERLYING_TABLE_NAME = 'underlying_table'
     FULL_TABLE_NAME = f'{SCHEMA_NAME}.{UNDERLYING_TABLE_NAME}'
+    pga = db_info.get_db_info(args.config_name, args.db_config_csv_path)
+    DB_USER_NAME = pga.username
+    DB_PASSWORD = pga.password
+    df_one_rec = pga.get_sql(f"select * from {FULL_TABLE_NAME} limit 1")
+    DB_COLUMNS = df_one_rec.columns.values
+    
     CSV_TEMP_PATH = './temp_folder/df_all_temp.csv'
     FUTURES_ZIP_FOLDER = f'{ZIP_FOLDER_PARENT}/futures' 
     FUTURES_UNZIP_FOLDER = './temp_folder/unzipfolder_futures'
@@ -287,7 +301,7 @@ if __name__=='__main__':
     def psql_copy():
         global DB_USER_NAME,WRITE_TO_POSTGRES
         copy_cmd = f"\COPY {FULL_TABLE_NAME} FROM '{CSV_TEMP_PATH}' DELIMITER ',' CSV HEADER;"
-        if DB_USER_NAME is not None:
+        if DB_USER_NAME is not None and len(DB_USER_NAME)>0:
             psql_cmd = f'sudo -u {DB_USER_NAME} psql -d testdb -c "CMD"'
         else:
             psql_cmd = f'psql  -d sec_db -c "CMD"'

@@ -7,7 +7,7 @@ create and instance of pg_pandas.PgPandas using a csv file with postgres config 
 @author: bperlman1
 '''
 import pandas as pd
-from . import pg_pandas as pg
+from barchartacs import pg_pandas as pg
 
 def get_db_info(config_name=None,db_info_csv_path=None):
     '''

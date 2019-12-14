@@ -79,7 +79,7 @@ class PgPandas(object):
                 if databasename is None:
                     missing_list.append("databasename")
                 s = ','.join(missing_list)
-                raise ValueError("%s is missing freom constructor" %(s))
+                raise ValueError("%s is missing from PgPandas constructor" %(s))
             self.username=username
             self.password=password
             self.dburl=dburl

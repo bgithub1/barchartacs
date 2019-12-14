@@ -41,6 +41,7 @@ python3 step_02_options_table_loader.py --write_to_postgres True --zip_folder_pa
 import numpy as np
 import sys
 import os
+from barchartacs.step_03_underlying_table_loader import DB_PASSWORD
 if  not './' in sys.path:
     sys.path.append('./')
 if  not '../' in sys.path:
@@ -51,6 +52,7 @@ from tqdm import tqdm
 import logging
 import argparse as ap
 import json
+from barchartacs import db_info
 
 def init_root_logger(logfile,logging_level=None):
     level = logging_level
@@ -105,12 +107,21 @@ if __name__ == '__main__':
     parser.add_argument('--write_to_postgres',type=str,
                         help='if True the data will be written to postgres.  Otherwise, a psql COPY command will be printed to the console.  Default=False',
                         default="False")
-    parser.add_argument('--db_username',type=str,
-                        help='username in Postgres login',
-                        default = 'logfile.log')
-    parser.add_argument('--db_password',type=str,
-                        help='password in Postgres login',
-                        default = 'logfile.log')
+#     parser.add_argument('--username',type=str,
+#                         help='username in Postgres login',
+#                         default="")
+#     parser.add_argument('--password',type=str,
+#                         help='password in Postgres login',
+#                         default="")
+#     parser.add_argument('--dburl',type=str,
+#                         help='url to db',
+#                         default="127.0.0.1")
+    parser.add_argument('--db_config_csv_path',type=str,
+                        help='path to the csv file that holds config_name,dburl,databasename,username,password info for the postgres db that you will update (default is ./postgres_info.csv',
+                        default="./postgres_info.csv")
+    parser.add_argument('--config_name',type=str,
+                        help='value of the config_name column in the db config csv file (default is local',
+                        default="local")
     parser.add_argument('--contract_list',type=str,
                         help='a comma delimited string of commodity codes.  Default = CL,CB,ES',
                         default = 'CL,CB,ES')
@@ -140,15 +151,19 @@ if __name__ == '__main__':
     END_YEAR = args.end_yyyy
     if len(str(END_YEAR))<=2:
         END_YEAR +=2000
-    DB_USER_NAME = None
     options_folder  = args.zip_folder_parent + "/options"
     futures_folder  = args.zip_folder_parent + "/futures"
-
+    pga = db_info.get_db_info(args.config_name, args.db_config_csv_path)
+    DB_USER_NAME = pga.username
+    DB_PASSWORD = pga.password
+    df_one_rec = pga.get_sql("select * from sec_schema.options_table limit 1")
+    DB_COLUMNS = df_one_rec.columns.values
     
     '''
     ************************** Step 2:  define method to write csv data to postgres efficiently **************************
     '''
     def psql_copy():
+        # first get column names in order as they appear in postgres
         global DB_USER_NAME,WRITE_TO_POSTGRES
         copy_cmd = f"\COPY {FULL_TABLE_NAME} FROM '{CSV_TEMP_PATH}' DELIMITER ',' CSV HEADER;"
         if DB_USER_NAME is not None:
@@ -188,7 +203,7 @@ if __name__ == '__main__':
                     bdb.logger.warn(f'ERROR MAIN LOOP: {str(e)}')
     
         # write all data to a csv file, that will be used in the postgres COPY command
-        df_all.to_csv(CSV_TEMP_PATH,index=False)
+        df_all[DB_COLUMNS].to_csv(CSV_TEMP_PATH,index=False)
         
     '''
     ****** Step 4:  if SINGLE_YYYYMM is NOT None then execute a specfic year and month *******
@@ -208,7 +223,7 @@ if __name__ == '__main__':
                 df_single.index = list(range(len(df_single)))
         except Exception as e:
             bdb.logger.warn(f'ERROR MAIN LOOP: {str(e)}')# NOW WRITE THIS DATA FOR THIS YEAR
-        df_single.to_csv(CSV_TEMP_PATH,index=False)
+        df_single[DB_COLUMNS].to_csv(CSV_TEMP_PATH,index=False)
     
     
     '''
