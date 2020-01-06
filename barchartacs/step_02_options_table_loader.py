@@ -41,7 +41,6 @@ python3 step_02_options_table_loader.py --write_to_postgres True --zip_folder_pa
 import numpy as np
 import sys
 import os
-from barchartacs.step_03_underlying_table_loader import DB_PASSWORD
 if  not './' in sys.path:
     sys.path.append('./')
 if  not '../' in sys.path:
@@ -123,7 +122,7 @@ if __name__ == '__main__':
                         help='value of the config_name column in the db config csv file (default is local',
                         default="local")
     parser.add_argument('--contract_list',type=str,
-                        help='a comma delimited string of commodity codes.  Default = CL,CB,ES',
+                        help='a comma delimited string of commodity codes.  Default = CL,CB,ES,NG',
                         default = 'CL,CB,ES')
     parser.add_argument('--strike_divisor_json_path',type=str,
                         help='if specified, a path to a json file that contains divisors for each commodity in contract_list',
@@ -155,6 +154,8 @@ if __name__ == '__main__':
     futures_folder  = args.zip_folder_parent + "/futures"
     pga = db_info.get_db_info(args.config_name, args.db_config_csv_path)
     DB_USER_NAME = pga.username
+    if DB_USER_NAME is not None and len(DB_USER_NAME)<1:
+        DB_USER_NAME = None
     DB_PASSWORD = pga.password
     df_one_rec = pga.get_sql("select * from sec_schema.options_table limit 1")
     DB_COLUMNS = df_one_rec.columns.values
@@ -167,7 +168,7 @@ if __name__ == '__main__':
         global DB_USER_NAME,WRITE_TO_POSTGRES
         copy_cmd = f"\COPY {FULL_TABLE_NAME} FROM '{CSV_TEMP_PATH}' DELIMITER ',' CSV HEADER;"
         if DB_USER_NAME is not None:
-            psql_cmd = f'sudo -u {DB_USER_NAME} psql -d testdb -c "CMD"'
+            psql_cmd = f'sudo -u {DB_USER_NAME} psql -d sec_db -c "CMD"'
         else:
             psql_cmd = f'psql  -d sec_db -c "CMD"'
         psql_cmd = psql_cmd.replace('CMD',copy_cmd)

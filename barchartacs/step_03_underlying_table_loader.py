@@ -111,8 +111,8 @@ if __name__=='__main__':
                         help='value of the config_name column in the db config csv file (default is local',
                         default="local")
     parser.add_argument('--contract_list',type=str,
-                        help='a comma delimited string of commodity codes.  Default = CL,CB,ES',
-                        default = 'CL,CB,ES')
+                        help='a comma delimited string of commodity codes.  Default = CL,CB,ES,NG',
+                        default = 'CL,CB,ES,NG')
 
     args = parser.parse_args()
     
