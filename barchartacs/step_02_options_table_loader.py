@@ -209,8 +209,6 @@ if __name__ == '__main__':
                         df_all.index = list(range(len(df_all)))
                 except Exception as e:
                     bdb.logger.warn(f'ERROR MAIN LOOP: {str(e)}')
-                    traceback.print_exc()
-                    raise ValueError(str(e))
     
         # write all data to a csv file, that will be used in the postgres COPY command
         df_all[DB_COLUMNS].to_csv(CSV_TEMP_PATH,index=False)
