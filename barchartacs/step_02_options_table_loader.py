@@ -195,11 +195,13 @@ if __name__ == '__main__':
         for yyyy in tqdm(np.arange(BEGIN_YEAR,END_YEAR+1)):
             for mm in tqdm(np.arange(1,13)):
                 yyyymm = yyyy*100 + mm
+                logger.info(f"step_02_options_table_loader executing {yyyymm}")
                 bdb = build_db.BuildDb(options_folder,yyyymm,
                                username=DB_USER_NAME,
                                password=DB_PASSWORD,
                                strike_divisor_dict=STRIKE_DIVISOR_DICT,
-                               contract_list=CONTRACT_LIST,write_to_database=False)
+                               contract_list=CONTRACT_LIST,write_to_database=False,
+                               logger=logger)
                 try:
                     df_temp = bdb.execute()            
                     if df_all is None:
