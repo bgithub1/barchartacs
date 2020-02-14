@@ -342,8 +342,6 @@ class BuildDb():
                     df_all.index = list(range(len(df_all)))
             except Exception as e:
                 self.logger.warn(f'ERROR build_options_pg_from_csvs yyyymm={self.yyyymm} file={p} exception={str(e)}')
-                traceback.print_exc()
-                raise ValueError(str(e))
         
         return df_all    
 
