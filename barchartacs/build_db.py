@@ -204,7 +204,7 @@ class BuildDb():
         try:
             # always try to build the table in case it's the first time
             sql = f"""
-            create table {self.schema_name}.{self.options_table_name}(
+            create table IF NOT EXISTS {self.schema_name}.{self.options_table_name}(
                 symbol text not null,
                 strike numeric not null,
                 pc text not null,
@@ -228,7 +228,7 @@ class BuildDb():
         try:
             # always try to build the table in case it's the first time
             sql = f"""
-            create table {self.schema_name}.{self.underlying_table_name}(
+            create table IF NOT EXISTS {self.schema_name}.{self.underlying_table_name}(
                 symbol text not null,
                 settle_date integer not null,
                 open numeric not null,

@@ -16,7 +16,7 @@ then
 fi
 if [[ ${run_type} == 'live' ]]
 then
-   rsync -ve "ssh -i temp_folder/remote_pem.pem" "${source_path}"  ${username}@${ipadd}:"${dest_path}"
+   rsync -ve "ssh -i temp_folder/remote_pem.pem" ${source_path}  ${username}@${ipadd}:"${dest_path}"
 else
-   rsync -nve "ssh -i temp_folder/remote_pem.pem" "${source_path}" ${username}@${ipadd}:"${dest_path}"
+   rsync -nve "ssh -i temp_folder/remote_pem.pem" ${source_path} ${username}@${ipadd}:"${dest_path}"
 fi
