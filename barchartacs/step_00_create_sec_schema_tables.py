@@ -108,8 +108,11 @@ if __name__ == '__main__':
     ************************** Step 3:  make a new table, if testorlive==live **************************
     '''
     if str(args.testorlive).lower()=='live':
+        print(f'creating schema {bdb.schema_name}')
         bdb.pga.exec_sql_raw(f"create schema IF NOT EXISTS {bdb.schema_name};")
+        print(f'creating futures table')
         bdb.make_underlying_table()
+        print(f'creating options table')
         bdb.make_options_table()
 
     
