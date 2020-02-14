@@ -24,8 +24,6 @@ import datetime
 import json
 import io
 import urllib.request
-
-
 from tqdm import tqdm,tqdm_notebook
 
 
@@ -280,9 +278,6 @@ if __name__=='__main__':
     parser.add_argument('--config_name',type=str,
                         help='value of the config_name column in the db config csv file (default is local',
                         default="local")
-    parser.add_argument('--contract_list',type=str,
-                        help='a comma delimited string of commodity codes.  Default = CL,CB,ES,NG',
-                        default = 'CL,CB,ES')
     parser.add_argument('--strike_divisor_json_path',type=str,
                         help='if specified, a path to a json file that contains divisors for each commodity in contract_list',
                         default = './divisor_dict.json')
@@ -297,8 +292,6 @@ if __name__=='__main__':
 
     
     # create a builder just so that you can get it's logger and it's pga instance
-#     builder = build_db.BuildDb(None,strike_divisor_dict=DIVISOR_DICT,
-#                            contract_list=CONTRACT_LIST,write_to_database=False)
     logger.info(f"fetching commod lists for options and futures")
     opt_contract_list = get_commod_list_from_max_settle_date(pga,tablename=OPTTAB)
     fut_contract_list = get_commod_list_from_max_settle_date(pga,tablename=FUTTAB)
