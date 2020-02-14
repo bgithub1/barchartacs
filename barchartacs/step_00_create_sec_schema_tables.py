@@ -58,11 +58,10 @@ def init_root_logger(logfile,logging_level=None):
     logger.addHandler(ch)   
     return logger
 
+#  
 
 DB_NAME = 'sec_db'
 SCHEMA_NAME = 'sec_schema'
-UNDERLYING_TABLE_NAME = 'underlying_table'
-FULL_TABLE_NAME = f'{SCHEMA_NAME}.{UNDERLYING_TABLE_NAME}'
 
 if __name__ == '__main__':
     logger = init_root_logger('logger.log','INFO') 
@@ -80,9 +79,6 @@ if __name__ == '__main__':
     parser.add_argument('--schema_name',type=str,
                         help='schema_name',
                         default=SCHEMA_NAME)
-    parser.add_argument('--table_name',type=str,
-                        help='table_name',
-                        default=UNDERLYING_TABLE_NAME)
     args = parser.parse_args()
     
     '''
