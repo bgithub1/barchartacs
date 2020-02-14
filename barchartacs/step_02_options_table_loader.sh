@@ -1,18 +1,18 @@
 # run step_02_options_table_loader.py from the command line
 #
 # example with postgres username and password, multiple years, using the "local" config in postgres_info.csv::
-# $ bash step_02_options_table_loader.sh 2016 2019 zip_folder_parent True virtualenv_folder local 
+# $ bash step_02_options_table_loader.sh 2016 2019 ./temp_folder/zip_files True ~/Virtualenvs3/dashrisk3 local 
 #
 # example DON'T write to postgres, only creating csv file for multiple years which 
 #    will be uploaded using the psql COPY command that get's printed at 
 #    the end of the run), using the "aws_lightsail" config in postgres_info.csv:
-# $ bash step_02_options_table_loader.sh 2016 2019 zip_folder_parent False virtualenv_folder aws_lightsail 
+# $ bash step_02_options_table_loader.sh 2016 2019 ./temp_folder/zip_files True ~/Virtualenvs3/dashrisk3 secdb_aws 
 #
 # example DON'T write to postgres, only creating csv file for 2017 which 
 #    will be uploaded using the psql COPY command that get's printed at 
 #    the end of the run), using the "local" config in postgres_info.csv, and
 #    specify a specific contract, like E6 (which is the alternative contract to ES for non H,M,U,Z options months:
-# $ bash step_02_options_table_loader.sh 2017 2017 zip_folder_parent False virtualenv_folder local E6
+# $ bash step_02_options_table_loader.sh 2017 2017 ./temp_folder/zip_files True ~/Virtualenvs3/dashrisk3 local E6
 #
 
 begin_yyyy=${1}
