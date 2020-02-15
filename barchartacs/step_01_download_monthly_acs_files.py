@@ -82,6 +82,10 @@ if __name__ == '__main__':
     parser.add_argument('--logging_level',type=str,
                         help='log level.  Default = INFO',
                         default = 'INFO')
+    parser.add_argument('--geckodriver_path',type=str,
+                        help='location of geckodriver',
+                        default = './geckodriver')
+    
     
     args = parser.parse_args()
 
@@ -148,7 +152,9 @@ if __name__ == '__main__':
     scrape the Barchart ACS website. 
     '''
     
-    sela = sc.SelScrape(headless=headless)
+#     sela = sc.SelScrape(headless=headless)
+    sela = sc.SelScrape(headless=headless,executable_path=args.geckodriver_path)
+    
     sela.goto(ACS_HOME_PAGE)
     time.sleep(1)
     wait(sela.driver, 5).until(EC.alert_is_present())
