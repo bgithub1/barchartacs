@@ -1,4 +1,13 @@
 # fetch geckodriver, untar it and move it to either ../ or /usr/local/bin
+firefox_dir="$1"
+
+if [[ -z ${firefox_dir} ]]
+then
+    firefox_dir='/opt'
+fi
+
+
+
 cd drivers
 
 # get geckodriver
@@ -12,5 +21,5 @@ cp -n geckodriver ../
 # get version 57.0 of firefox
 wget http://ftp.mozilla.org/pub/firefox/releases/57.0/linux-$(uname -m)/en-US/firefox-57.0.tar.bz2
 tar -xjf firefox-57.0.tar.bz2
-sudo mv -vn firefox /opt
-sudo ln -s sudo ln -s /opt/firefox/firefox /usr/bin/firefox
+sudo mv -vn firefox "${firefox_dir}"
+sudo ln -s sudo ln -s "${firefox_dir}/firefox/firefox" /usr/bin/firefox

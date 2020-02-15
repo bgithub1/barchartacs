@@ -26,3 +26,16 @@ def get_db_info(config_name=None,db_info_csv_path=None):
     print(u,p,d)
     pga = pg.PgPandas(dburl=s_info.dburl,databasename=d,username=u,password=p)    
     return pga
+
+def get_db_info_csv(config_name=None,db_info_csv_path=None):
+    '''
+    return the config line for config_name
+    :param config_name (default = local:
+    :param db_info_csv_path: (default = postgres_info.csv)
+    '''
+    cf='local' if config_name is None else config_name
+    dbcsv_path = './postgres_info.csv' if db_info_csv_path is None else db_info_csv_path
+    df_dbinfo = pd.read_csv(dbcsv_path)
+    s_info = df_dbinfo[df_dbinfo.config_name==cf].iloc[0]
+    return s_info
+    

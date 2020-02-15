@@ -1,6 +1,6 @@
 '''
 
-Create the futures daily settlement table 
+Create the options and futures daily settlement table 
    
 Overview:
 Options and futures daily settlement data is written to a Postgres database with the following characteristics:
@@ -63,24 +63,7 @@ def init_root_logger(logfile,logging_level=None):
 DB_NAME = 'sec_db'
 SCHEMA_NAME = 'sec_schema'
 
-if __name__ == '__main__':
-    logger = init_root_logger('logger.log','INFO') 
-    parser =  ap.ArgumentParser()
-
-    parser.add_argument('--testorlive',type=str,
-                        help='if "live", create the table named sec_schema.underlying_table.  Default=test',
-                        default="test")
-    parser.add_argument('--db_config_csv_path',type=str,
-                        help='path to the csv file that holds config_name,dburl,databasename,username,password info for the postgres db that you will update (default is ./postgres_info.csv',
-                        default="./postgres_info.csv")
-    parser.add_argument('--config_name',type=str,
-                        help='value of the config_name column in the db config csv file (default is local',
-                        default="local")
-    parser.add_argument('--schema_name',type=str,
-                        help='schema_name',
-                        default=SCHEMA_NAME)
-    args = parser.parse_args()
-    
+def main(args):
     '''
     ************************** Step 1:  get arguments from argparse variables **************************
     '''
@@ -120,5 +103,24 @@ if __name__ == '__main__':
     ************************* END ****************************
     '''
     logger.info("finished")
+
+if __name__ == '__main__':
+    logger = init_root_logger('logger.log','INFO') 
+    parser =  ap.ArgumentParser()
+
+    parser.add_argument('--testorlive',type=str,
+                        help='if "live", create the table named sec_schema.underlying_table.  Default=test',
+                        default="test")
+    parser.add_argument('--db_config_csv_path',type=str,
+                        help='path to the csv file that holds config_name,dburl,databasename,username,password info for the postgres db that you will update (default is ./postgres_info.csv',
+                        default="./postgres_info.csv")
+    parser.add_argument('--config_name',type=str,
+                        help='value of the config_name column in the db config csv file (default is local',
+                        default="local")
+    parser.add_argument('--schema_name',type=str,
+                        help='schema_name',
+                        default=SCHEMA_NAME)
+    args = parser.parse_args()
+    main(args)
     
 
