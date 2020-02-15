@@ -240,7 +240,13 @@ if __name__ == '__main__':
     '''
     ************************ Step 10:  Instantiate a new SelScrape ****************
     '''
-    sela = sc.SelScrape(headless=headless)
+    # Use geckodriver in ./ (module folder) if it's there.  Otherwise, don't specify executable_path
+    gecko_path = os.path.abspath('.')+'/geckodriver'
+    if os.path.isfile(gecko_path):
+        sela = sc.SelScrape(headless=headless,executable_path=gecko_path)
+    else:
+        sela = sc.SelScrape(headless=headless)
+        
     sela.goto(ACS_HOME_PAGE)
     time.sleep(1)
     wait(sela.driver, 5).until(EC.alert_is_present())
