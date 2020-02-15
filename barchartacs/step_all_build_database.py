@@ -110,8 +110,6 @@ if __name__ == '__main__':
     ************************** see if db exists and create if it does not **************************
     '''
     run_pdb = str(args.run_pdb).lower()=='true'
-    if run_pdb:
-        pdb.set_trace()
         
     db_exists = True
     try:        
@@ -143,6 +141,9 @@ if __name__ == '__main__':
         schema_name=args.schema_name)              
     s00.main(s00_args)
     
+    if run_pdb:
+        pdb.set_trace()
+        
     '''
     ************************** Step 1 run main in step_00_create_sec_schema_tables.sh **************************
     '''
