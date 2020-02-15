@@ -160,10 +160,12 @@ if __name__ == '__main__':
     zipfold = args.zip_folder_parent
     virt = args.virtualenv_folder
     if virt is None:        
-        h = Path.home()
+        h = str(Path.home())
         virt = h+'/Virtualenvs3/dashrisk3'
     cmd = f"bash step_01_download_monthly_acs_files.sh {acsu} {acsp} {zipfold} {begyy} {endyy} {virt}"
     logger.info(f"executing cmd: {cmd}")
+    if run_pdb:
+        pdb.set_trace()
     os.system(cmd)
     
     '''
