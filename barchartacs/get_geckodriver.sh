@@ -25,4 +25,4 @@ cp -n geckodriver ../
 wget http://ftp.mozilla.org/pub/firefox/releases/57.0/linux-$(uname -m)/en-US/firefox-57.0.tar.bz2
 tar -xjf firefox-57.0.tar.bz2
 sudo mv -vn firefox "${firefox_dir}"
-sudo ln -s sudo ln -s "${firefox_dir}/firefox/firefox" /usr/bin/firefox
+sudo ln -s "${firefox_dir}/firefox/firefox" /usr/bin/firefox
