@@ -169,12 +169,12 @@ if __name__ == '__main__':
     '''
     ************************** Step 2 run step_02_options_table_loader_single_yyyymm.sh **************************
     '''
-    testorlive = str(args.testorlive).lower()=='true'
+    write_to_db = str(args.testorlive).lower()=='live'
     for yy in range(begyy,endyy+1):
         yyyy = 2000 + yy
         for m in range(1,13):
             yyyymm = yyyy * 100 + m
-            cmd = f"bash step_02_options_table_loader_single_yyyymm.sh {yyyymm} {zipfold} {testorlive} {virt} {args.config_name}"
+            cmd = f"bash step_02_options_table_loader_single_yyyymm.sh {yyyymm} {zipfold} {write_to_db} {virt} {args.config_name}"
             os.system(cmd)
             
     '''
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     '''
     begyyyy = begyy + 2000
     endyyyy = endyy + 2000
-    cmd = f"bash step_03_underlying_table_loader.sh {begyyyy} {endyyyy} {zipfold} {testorlive} {virt} {args.config_name}"
+    cmd = f"bash step_03_underlying_table_loader.sh {begyyyy} {endyyyy} {zipfold} {write_to_db} {virt} {args.config_name}"
     os.system(cmd)
     
     
