@@ -26,8 +26,11 @@ import sys
 import os
 if  not os.path.abspath('./') in sys.path:
     sys.path.append(os.path.abspath('./'))
+
+
 if  not os.path.abspath('../') in sys.path:
     sys.path.append(os.path.abspath('../'))
+
 
 from barchartacs import build_db
 import logging
@@ -113,6 +116,7 @@ if __name__ == '__main__':
     db_exists = True
     try:        
         pga = db_info.get_db_info(args.config_name, args.db_config_csv_path)
+        pga.get_sql("select * from information_schema.tables where table_schema = 'sec_schema'")
     except:
         db_exists = False
     if not db_exists:
