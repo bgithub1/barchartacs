@@ -115,7 +115,7 @@ if __name__ == '__main__':
     
     logger.info(f'ZIP_FOLDER_PARENT into which files will be download = {ZIP_FOLDER_PARENT}')
     headless = args.show_browser
-    
+    logger.info(f'headless param = {headless}')
     
     '''
     **************************** Step 3: Set important constants *****************************
