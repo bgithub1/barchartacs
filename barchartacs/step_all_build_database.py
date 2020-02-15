@@ -88,7 +88,7 @@ if __name__ == '__main__':
                         help='password of Barchart ACS service')
     parser.add_argument('--zip_folder_parent',type=str,
                         help='full folder path into which you will download zip files',
-                        defai='./temp_folder/zip_files')
+                        default='./temp_folder/zip_files')
     parser.add_argument('--begin_yy',type=int,
                         help='2 character year like 11 for 2011 or 23 for 2023 for first year of options zip files to download from barchart')
     parser.add_argument('--end_yy',type=int,
