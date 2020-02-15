@@ -148,8 +148,12 @@ if __name__ == '__main__':
     Instantiate an instance of sel_scape.SelScrape in order to 
     scrape the Barchart ACS website. 
     '''
-    
-    sela = sc.SelScrape(headless=headless)
+    # Use geckodriver in ./ (module folder) if it's there.  Otherwise, don't specify executable_path
+    gecko_path = os.path.abspath('.')+'/geckodriver'
+    if os.path.isfile(gecko_path):
+        sela = sc.SelScrape(headless=headless,executable_path=gecko_path)
+    else:
+        sela = sc.SelScrape(headless=headless)
     
     sela.goto(ACS_HOME_PAGE)
     time.sleep(1)
