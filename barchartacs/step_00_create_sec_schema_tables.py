@@ -68,7 +68,7 @@ def main(args):
     ************************** Step 1:  get arguments from argparse variables **************************
     '''
         
-
+    logger = init_root_logger('logger.log','INFO')
     pga = db_info.get_db_info(args.config_name, args.db_config_csv_path)
     DB_USER_NAME = pga.username
     if DB_USER_NAME is not None and len(DB_USER_NAME)<1:
@@ -105,7 +105,7 @@ def main(args):
     logger.info("finished")
 
 if __name__ == '__main__':
-    logger = init_root_logger('logger.log','INFO') 
+     
     parser =  ap.ArgumentParser()
 
     parser.add_argument('--testorlive',type=str,
