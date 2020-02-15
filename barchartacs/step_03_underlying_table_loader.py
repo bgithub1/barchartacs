@@ -302,7 +302,7 @@ if __name__=='__main__':
         global DB_USER_NAME,WRITE_TO_POSTGRES
         copy_cmd = f"\COPY {FULL_TABLE_NAME} FROM '{CSV_TEMP_PATH}' DELIMITER ',' CSV HEADER;"
         if DB_USER_NAME is not None and len(DB_USER_NAME)>0:
-            psql_cmd = f'sudo -u {DB_USER_NAME} psql -d testdb -c "CMD"'
+            psql_cmd = f'sudo -u {DB_USER_NAME} psql -d sec_db -c "CMD"'
         else:
             psql_cmd = f'psql  -d sec_db -c "CMD"'
         psql_cmd = psql_cmd.replace('CMD',copy_cmd)
