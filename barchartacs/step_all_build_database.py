@@ -128,7 +128,7 @@ if __name__ == '__main__':
         cmd = f"sudo -u postgres psql -c 'create database {databasename};'"
         logger.info(f"executing cmd: {cmd}")
         os.system(cmd)
-        cmd = f"psql -d sec_db -c \"ALTER USER postgres WITH PASSWORD '{password}';\""
+        cmd = f"sudo -u postgres psql -d sec_db -c \"ALTER USER postgres WITH PASSWORD '{password}';\""
         logger.info(f"executing cmd: {cmd}")
         os.system(cmd)
             
