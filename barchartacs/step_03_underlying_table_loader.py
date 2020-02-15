@@ -137,7 +137,7 @@ if __name__=='__main__':
 
 
 
-    WRITE_DATA=args.write_to_postgres # set to True if you want to copy new data to postgres using psql copy 
+#     WRITE_DATA=args.write_to_postgres # set to True if you want to copy new data to postgres using psql copy 
     ZIP_FOLDER_PARENT = args.zip_folder_parent 
     BEGIN_YY = int(str(BEGIN_YEAR)[-2:])
     END_YY =  int(str(END_YEAR)[-2:])
@@ -307,11 +307,12 @@ if __name__=='__main__':
             psql_cmd = f'psql  -d sec_db -c "CMD"'
         psql_cmd = psql_cmd.replace('CMD',copy_cmd)
         if  WRITE_TO_POSTGRES:  # double check !!!
-            logger.info(f'BEGIN executing psql COPY command')
+            logger.info(f'step_03_underlying_table_loader BEGIN executing psql COPY command')
             os.system(psql_cmd)
-            logger.info(f'END executing psql COPY command')
+            logger.info(f'step_03_underlying_table_loader END executing psql COPY command')
         else:
-            print(psql_cmd)
+            logger.info(f'step_03_underlying_table_loader NOT executing psql COPY command')
+            logger.info(psql_cmd)
      
     '''
     ************* Step 6: Write data using psql COPY (or print the psql command) *************
