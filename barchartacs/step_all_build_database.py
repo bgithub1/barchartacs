@@ -24,7 +24,6 @@ python3 step_all_build_database.py --testorlive live --config_name secdb_aws --a
 
 import sys
 import os
-from barchartacs.build_db import init_root_logger
 if  not os.path.abspath('./') in sys.path:
     sys.path.append(os.path.abspath('./'))
 if  not os.path.abspath('../') in sys.path:
