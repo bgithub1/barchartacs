@@ -160,7 +160,7 @@ if __name__ == '__main__':
     if virt is None:        
         h = str(Path.home())
         virt = h+'/Virtualenvs3/dashrisk3'
-    cmd = f"bash step_01_download_monthly_acs_files.sh {acsu} {acsp} {zipfold} {begyy} {endyy} {virt}"
+    cmd = f"bash step_01_download_monthly_acs_files.sh {acsu} {acsp} {begyy} {endyy} {zipfold} {virt}"
     logger.info(f"executing cmd: {cmd}")
     if run_pdb:
         pdb.set_trace()
