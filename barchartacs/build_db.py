@@ -231,6 +231,7 @@ class BuildDb():
             create table IF NOT EXISTS {self.schema_name}.{self.underlying_table_name}(
                 symbol text not null,
                 settle_date integer not null,
+                contract_num integer not null,
                 open numeric not null,
                 high numeric not null,
                 low numeric not null,

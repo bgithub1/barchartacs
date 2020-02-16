@@ -159,7 +159,7 @@ if __name__=='__main__':
     df_one_rec = pga.get_sql(f"select * from {FULL_TABLE_NAME} limit 1")
     DB_COLUMNS = df_one_rec.columns.values
     
-    CSV_TEMP_PATH = './temp_folder/df_all_temp.csv'
+    CSV_TEMP_PATH = './temp_folder/df_all_futures_temp.csv'
     FUTURES_ZIP_FOLDER = f'{ZIP_FOLDER_PARENT}/futures' 
     FUTURES_UNZIP_FOLDER = './temp_folder/unzipfolder_futures'
     if not os.path.isdir(FUTURES_UNZIP_FOLDER):

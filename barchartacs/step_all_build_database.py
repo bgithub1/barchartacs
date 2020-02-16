@@ -32,10 +32,10 @@ if  not os.path.abspath('../') in sys.path:
     sys.path.append(os.path.abspath('../'))
 
 
+from barchartacs import db_info
 from barchartacs import build_db
 import logging
 import argparse as ap
-from barchartacs import db_info
 from barchartacs import step_00_create_sec_schema_tables as s00
 from pathlib import Path
 import pdb
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     
         
     '''
-    ************************** Step 1 run main in step_00_create_sec_schema_tables.sh **************************
+    ************************** Step 1 run main in step_01_download_monthly_acs_files.sh **************************
     '''
     # test to see if /usr/bin/firefox and ./geckodriver exist
     usr_bin_firefox_exists = os.path.isfile('/usr/bin/firefox')
