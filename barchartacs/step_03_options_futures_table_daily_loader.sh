@@ -29,5 +29,5 @@ fi
 
 source ${virtualenv_folder}/bin/activate
 
-python3 step_03_options_futures_table_daily_loader.py --config_name ${config_name} --write_to_postgres False
+python3 step_03_options_futures_table_daily_loader.py --config_name ${config_name} --write_to_postgres ${write_to_postgres}
 

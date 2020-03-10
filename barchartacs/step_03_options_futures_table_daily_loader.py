@@ -42,20 +42,28 @@ FUTTAB = 'sec_schema.underlying_table'
 # In[ ]:
 
 
-def psql_copy(pga,full_tablename,csv_temp_path,logger,write_to_postgres=False):
+def psql_copy(pga,full_tablename,csv_temp_path,write_to_postgres=False,logger=None):
     # first get column names in order as they appear in postgres
     db_username = pga.username
     
     copy_cmd = f"\COPY {full_tablename} FROM '{csv_temp_path}' DELIMITER ',' CSV HEADER;"
-    if db_username is not None:
+    if db_username is not None and len(db_username.strip())>0:
         psql_cmd = f'sudo -u {db_username} psql -d sec_db -c "CMD"'
     else:
         psql_cmd = f'psql  -d sec_db -c "CMD"'
     psql_cmd = psql_cmd.replace('CMD',copy_cmd)
     if  write_to_postgres:  # double check !!!
-        logger.info(f'BEGIN executing psql COPY command: {psql_cmd}')
+        msg = f'BEGIN executing psql COPY command: {psql_cmd}'
+        if logger is None:
+            print(msg)
+        else:
+            logger.info(msg)
         os.system(psql_cmd)
-        logger.info(f'END executing psql COPY command')
+        msg = f'END executing psql COPY command'
+        if logger is None:
+            print(msg)
+        else:
+            logger.info(msg)
     else:
         print(psql_cmd)
 
@@ -349,9 +357,9 @@ if __name__=='__main__':
     if WRITE_TO_POSTGRES:
         logger.info(f"MAIN LOOP: writing options data to database")
         abspath = os.path.abspath(CSV_TEMP_PATH_OPTIONS)
-        psql_copy(pga,OPTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES)
+        psql_copy(pga,OPTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
         logger.info(f"MAIN LOOP: writing futures data to database")
         abspath = os.path.abspath(CSV_TEMP_PATH_FUTURES)
-        psql_copy(pga,FUTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES)
+        psql_copy(pga,FUTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
 
 
