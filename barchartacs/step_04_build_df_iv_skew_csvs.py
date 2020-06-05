@@ -527,7 +527,12 @@ def skew_per_symbol(symbol,strike_divisor=None):
 # #### Loop through all contracts and create DataFrames for implied vol and skew (`df_iv_final` and `df_iv_skew`)
 
 # In[24]:
-
+def cash_futures_to_csv(sym):
+    cash_sql = f"select * from sec_schema.underlying_table where symbol='{sym}Z99';"
+    df_cash_futures = pga.get_sql(cash_sql)
+    print(len(df_cash_futures))
+    df_cash_futures.to_csv(f'./temp_folder/df_cash_futures_{sym}.csv',index=False)
+    return df_cash_futures
 
 for sym_to_res in tqdm(['ES','CL','CB','NG']):
     SYMBOL_TO_RESEARCH = sym_to_res
@@ -569,8 +574,8 @@ for sym_to_res in tqdm(['ES','CL','CB','NG']):
     print(dict_exceptions)
     df_iv_final.to_csv(f'./temp_folder/df_iv_final_{SYMBOL_TO_RESEARCH}.csv',index=False)
     df_iv_skew.to_csv(f'./temp_folder/df_iv_skew_{SYMBOL_TO_RESEARCH}.csv',index=False)    
-
-
+    cash_futures_to_csv(SYMBOL_TO_RESEARCH)
+    
 # # ### save to csv and print any exceptions that might have occured
 # 
 # # In[19]:
