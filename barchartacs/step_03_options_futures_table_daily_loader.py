@@ -93,7 +93,7 @@ def do_request(url,dict_headers=None):
 
 
 def build_daily(commod_code_list,yyyymmdd=None,barchart_auth_code=None,text_file_path=None,
-               divisor_dict = DIVISOR_DICT):
+               divisor_dict = DIVISOR_DICT,pga=None):
     '''
     commod_code_list: like ['ES'] or ['CL','CB']
     yyyymmdd: like 20190705.  It must be a date in the current month
@@ -118,7 +118,7 @@ def build_daily(commod_code_list,yyyymmdd=None,barchart_auth_code=None,text_file
     opvtxt = opvtxt.decode('utf-8')
     open(tfp,'w').write(opvtxt)
     builder = build_db.BuildDb(None,strike_divisor_dict=divisor_dict,
-                           contract_list=commod_code_list,write_to_database=False)
+                           contract_list=commod_code_list,write_to_database=False,pga=pga)
     dft = builder.build_options_pg_from_csvs(tfp)
     return dft
 
@@ -316,7 +316,7 @@ if __name__=='__main__':
 
         # build options
         try:
-            df_temp = build_daily(commod_code_list=opt_contract_list,yyyymmdd=yyyymmdd)
+            df_temp = build_daily(commod_code_list=opt_contract_list,yyyymmdd=yyyymmdd,pga=pga)
             if df_all_options is None:
                 df_all_options = df_temp.copy()
             else:

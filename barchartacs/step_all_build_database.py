@@ -14,7 +14,7 @@ Options and futures daily settlement data is written to a Postgres database with
 |Database|   *sec_db*    |
 | Schema | *sec_schema*  |
 | Table  |*options_table*|
-| Table  |*futures_table*|
+| Table  |*underlying_table*|
 
 example:
 

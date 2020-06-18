@@ -23,6 +23,7 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 import sys
 import os
+from barchartacs.step_02_options_table_loader import pga
 
 if  not './' in sys.path:
     sys.path.append('./')
@@ -93,6 +94,7 @@ class BuildDb():
                  recreate_tables=False,
                  contract_list = None,
                  write_to_database=False,
+                 pga=None,
                  logger = None
                  ):
         
@@ -109,14 +111,23 @@ class BuildDb():
                              
         self.zipname_first_part = 'opv' if zipname_first_part is None else zipname_first_part
         
+        self.schema_name = schema_name if schema_name is not None else BuildDb.BUILDDB_SCHEMA_NAME
         self.options_table_name = 'options_table' if options_table_name is None else options_table_name
         self.underlying_table_name = 'underlying_table' if underlying_table_name is None else underlying_table_name
         
-        self.dburl = dburl if dburl is not None else 'localhost'
-        self.username = username if username is not None else ''
-        self.password = password if password is not None else ''
-        self.databasename = databasename if databasename is not None else BuildDb.BUILDDB_DB_NAME
-        self.schema_name = schema_name if schema_name is not None else BuildDb.BUILDDB_SCHEMA_NAME
+        if pga is not None:
+            self.pga = pga
+        else:
+            self.dburl = dburl if dburl is not None else 'localhost'
+            self.username = username if username is not None else ''
+            self.password = password if password is not None else ''
+            self.databasename = databasename if databasename is not None else BuildDb.BUILDDB_DB_NAME
+            self.pga = pg.PgPandas(databasename=self.databasename,username=self.username,password=self.password,dburl=self.dburl)
+        try:
+            self.pga.get_sql('select * from information_schema.tables')
+        except Exception as e:
+            self.logger.warn(str(e))
+            raise ValueError(f'CANNOT ACCESS postgres database {self.databasename}.  You might have to create it with createdb {self.databasename}')
         
         self.dict_month_names = {
             1:'jan',
@@ -134,12 +145,6 @@ class BuildDb():
             }
         self.options_header = 'contract,month_year,strike_right,date,open,high,low,close,volume,open_interest'
         self.logger = init_root_logger('logfile.log', 'INFO') if logger is None else logger
-        self.pga = pg.PgPandas(databasename=self.databasename,username=self.username,password=self.password,dburl=self.dburl)
-        try:
-            self.pga.get_sql('select * from information_schema.tables')
-        except Exception as e:
-            self.logger.warn(str(e))
-            raise ValueError(f'CANNOT ACCESS postgres database {self.databasename}.  You might have to create it with createdb {self.databasename}')
         self.contract_list = ['CL','CB','CT','CD','D6',
                              'E6','ES','GC','GE','HO',
                              'J6','KC','LB','LC','LH',
