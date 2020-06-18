@@ -23,7 +23,6 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 import sys
 import os
-from barchartacs.step_02_options_table_loader import pga
 
 if  not './' in sys.path:
     sys.path.append('./')
