@@ -16,10 +16,13 @@ from selenium.webdriver.common.by import By
 import traceback
 import time
 import logging
+import selscrape_dummy as dum
 
 import inspect 
 import argparse as ap
 import os
+
+import pdb
 
 def get_full_path_of_import(import_module_reference):
     """
@@ -34,7 +37,9 @@ def get_full_path_of_import(import_module_reference):
 #     path_split = inspect.getfile(import_module_reference).split("/")
     path_split = os.path.split(inspect.getfile(import_module_reference))
 #     ret_path = "/".join(path_split[:len(path_split)-1])
-    ret_path = os.path.join(path_split[:len(path_split)-1])
+#     pdb.set_trace()
+#     ret_path = os.path.join(path_split[:len(path_split)-1])
+    ret_path = path_split[0]
     return ret_path
 
 
@@ -117,7 +122,7 @@ class SelScrape(object):
         self.exclude_list = exclude_list
         self.executable_path = executable_path
         
-#         self.this_folder = get_full_path_of_import(dum)
+        self.this_folder = get_full_path_of_import(dum)
         if driver_name is None:
             self.driver = self._firefox_driver()
         elif driver_name.lower() == 'chrome_linux':
