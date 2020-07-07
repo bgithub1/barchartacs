@@ -1097,7 +1097,7 @@ if __name__=='__main__':
     # Add all of the DashLinks to the DashApp instance (dap)
     dap.add_links(all_links)
     # Create the dash app object by calling the create_app method of dap (the instance of DashApp)
-    dap.create_app(all_rows,app_title='example2',app_port=8804)
+    dap.create_app(all_rows,app_title='downside_put_hedge_strategy',url_base_pathname='/dps/',app_port=8804)
     
     
 
