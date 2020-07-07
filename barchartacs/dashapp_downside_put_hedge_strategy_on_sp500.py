@@ -133,19 +133,19 @@ def str_to_date(d,sep='-'):
     return dt
 
 
-def fetch_history(symbol,dt_beg,dt_end):
-    df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
-    # move index to date column, sort and recreate index
-    df['date'] = df.index
-    df = df.sort_values('date')
-    df.index = list(range(len(df)))
-    # make adj close the close
-    df = df.drop(['Adj Close'],axis=1)
-    cols = df.columns.values 
-    cols_dict = {c:c[0].lower() + c[1:] for c in cols}
-    df = df.rename(columns = cols_dict)
-    df['settle_date'] = df.date.apply(str_to_yyyymmdd)
-    return df
+# def fetch_history(symbol,dt_beg,dt_end):
+#     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
+#     # move index to date column, sort and recreate index
+#     df['date'] = df.index
+#     df = df.sort_values('date')
+#     df.index = list(range(len(df)))
+#     # make adj close the close
+#     df = df.drop(['Adj Close'],axis=1)
+#     cols = df.columns.values 
+#     cols_dict = {c:c[0].lower() + c[1:] for c in cols}
+#     df = df.rename(columns = cols_dict)
+#     df['settle_date'] = df.date.apply(str_to_yyyymmdd)
+#     return df
 
 
 # In[6]:
@@ -736,7 +736,9 @@ def build_scenarios(beg_year,end_year,low_pom,high_pom,rebal_target,rebal_adjust
 
     #   loop on increasing beg_year, but holding end_year constant
     dft_dict = {}
-    for y in tqdm(beg_years):
+#     for y in tqdm(beg_years):
+    for y in beg_years:
+        print(f"build_scenarios: year:{y} of {beg_years}")
         yyyymmdd_beg = int(y)*100*100 + 101 
         #    loop on pom
         for pom in [round(x,2) for x in np.arange(low_pom,high_pom+.01,.02)]:
