@@ -833,7 +833,7 @@ init_high_pom = .18
 init_rebal_target = .6
 init_rebal_adjust = .7
 init_years_to_hedge=1
-init_beg_year = 1990
+init_beg_year = 1997#1990
 init_beg_yyyymmdd = init_beg_year*100*100 + 701
 init_end_yyyymmdd = 203001010
 
