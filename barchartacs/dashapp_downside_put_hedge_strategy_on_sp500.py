@@ -307,16 +307,37 @@ def calc_put_spread(
 # 
 
 # In[8]:
+class DataInputs():
+    def __init__(self):
+        self.df_spy = get_redis_df('df_spy')
+        self.df_vix = get_redis_df('df_vix')
+        self.df_1yr_rate = get_redis_df('df_1yr_rate')
+        self.df_div = get_redis_df('df_div')
 
 
+# def create_dft(put_perc_otm,years_to_hedge,
+#               yyyymmdd_beg=None,yyyymmdd_end=None,use_fast=True):
+# #     global df_spy,df_1yr_rate,df_vix,df_div
+#     df_spy = get_redis_df('df_spy')
+#     df_vix = get_redis_df('df_vix')
+# #     df_tnx = get_redis_df('df_tnx')
+#     df_1yr_rate = get_redis_df('df_1yr_rate')
+#     df_div = get_redis_df('df_div')
 def create_dft(put_perc_otm,years_to_hedge,
-              yyyymmdd_beg=None,yyyymmdd_end=None,use_fast=True):
-#     global df_spy,df_1yr_rate,df_vix,df_div
-    df_spy = get_redis_df('df_spy')
-    df_vix = get_redis_df('df_vix')
-#     df_tnx = get_redis_df('df_tnx')
-    df_1yr_rate = get_redis_df('df_1yr_rate')
-    df_div = get_redis_df('df_div')
+              yyyymmdd_beg=None,yyyymmdd_end=None,use_fast=True,
+              data_inputs=None):
+    if data_inputs is None:
+        df_spy = get_redis_df('df_spy')
+        df_vix = get_redis_df('df_vix')
+        df_1yr_rate = get_redis_df('df_1yr_rate')
+        df_div = get_redis_df('df_div')
+    else:
+        df_spy = data_inputs.df_spy
+        df_vix = data_inputs.df_vix
+        df_1yr_rate = data_inputs.df_1yr_rate
+        df_div = data_inputs.df_div
+        
+
             
     # Create a lambda that converts yyyymmdd integer to a datetime object
     yyyymmdd_to_dt = lambda v:datetime.datetime(
@@ -591,13 +612,16 @@ def _get_df_values_from_input_data(input_data):
     new_rebal_adjust = float(rebal_adjust_string)
     return _get_df_values(yyyymmdd_beg,yyyymmdd_end,new_pom,new_rebal_target,new_rebal_adjust)
 
-def _get_df_values(yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust,years_to_hedge=1):
+def _get_df_values(yyyymmdd_beg,yyyymmdd_end,
+                   pom,rebal_target,rebal_adjust,years_to_hedge=1,
+                   data_inputs=None):
     # validate values
     new_pom = pom
     new_rebal_target = rebal_target
     new_rebal_adjust = rebal_adjust
     dft_new = create_dft(new_pom,years_to_hedge,
-                       yyyymmdd_beg=yyyymmdd_beg,yyyymmdd_end=yyyymmdd_end)
+                       yyyymmdd_beg=yyyymmdd_beg,yyyymmdd_end=yyyymmdd_end,
+                       data_inputs=data_inputs)
 
     df_values,df_daily_values,df_rebalance_info = create_comparative_returns(
         dft_new,years_to_hedge,new_rebal_target,new_rebal_adjust,pom=new_pom)
@@ -737,16 +761,23 @@ def build_scenarios(beg_year,end_year,low_pom,high_pom,rebal_target,rebal_adjust
     #   loop on increasing beg_year, but holding end_year constant
     dft_dict = {}
 #     for y in tqdm(beg_years):
-    for y in beg_years:
-        print(f"build_scenarios: year:{y} of {beg_years}")
+#         yyyymmdd_beg = int(y)*100*100 + 101 
+#         #    loop on pom
+#         for pom in [round(x,2) for x in np.arange(low_pom,high_pom+.01,.02)]:
+#             dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
+#                 yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust)
+#             dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
+#     return dft_dict
+    data_inputs = DataInputs()
+    for y in tqdm(beg_years):
         yyyymmdd_beg = int(y)*100*100 + 101 
         #    loop on pom
         for pom in [round(x,2) for x in np.arange(low_pom,high_pom+.01,.02)]:
             dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
-                yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust)
+                yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust,
+                data_inputs=data_inputs)
             dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
     return dft_dict
-
 
 # In[13]:
 
