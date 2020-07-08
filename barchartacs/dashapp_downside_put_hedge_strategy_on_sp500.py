@@ -714,7 +714,8 @@ def _get_scenarios_figure(input_data):
     end_pom = float(str(input_data[3]))  
     all3_query = f"(year>={beg_year}) and (year<={end_year}) and (pom>={beg_pom}) and (pom<={end_pom})"
     dft_dict = build_scenarios(beg_year,end_year,beg_pom,end_pom,.6,.7)
-    df_all3,df_all = build_3d_display_df(dft_dict)
+#     df_all3,df_all = build_3d_display_df(dft_dict)
+    df_all3,_ = build_3d_display_df(dft_dict)
     df_all3_scenarios = df_all3.query(all3_query)
     fig = px.scatter_3d(df_all3_scenarios, x='pom', y='year', z='ret',color='ret_type')
     fig.update_layout(
@@ -835,7 +836,7 @@ init_end_yyyymmdd = 203001010
 
 
 # create row 1
-def create_row_1(dap):
+def create_row_1():
     # ************ Create row 1 (the main title) *******************
     app_title = """Compare Put-Protected SP500 Strategies
 vs
@@ -921,7 +922,11 @@ def create_row_3(dap,r2c1_intuplist):
     get_close_vs_hedge_stock_vs_cash = dcc.Graph(
         id='get_close_vs_hedge_stock_vs_cash',style={'width':'90vw'})
     def _update_close_vs_hedge_stock_vs_cash(input_data):
-        return [_get_close_vs_hedge_stock_vs_cash_figure(input_data)]
+        try:  
+            return [_get_close_vs_hedge_stock_vs_cash_figure(input_data)]
+        except Exception as e:
+            dashapp.stop_callback(str(e))
+            
     r3_link = dashapp.DashLink(
         r2c1_intuplist,
         [(get_close_vs_hedge_stock_vs_cash,'figure')],
@@ -953,7 +958,7 @@ def create_row_4(dap):
 # In[20]:
 
 
-def create_row_5(dap):
+def create_row_5():
     app_title2 = """
     Show groups of scenarios
     """
@@ -964,7 +969,7 @@ def create_row_5(dap):
 # In[21]:
 
 
-def create_row_6(dap,df_all_init):
+def create_row_6(df_all_init):
     # row 6 col 1 
 #     df_spy = get_redis_df('df_spy')
 #     init_beg_year = int(str(df_spy.settle_date.min())[:4])
@@ -1014,7 +1019,7 @@ def create_row_6(dap,df_all_init):
 # In[22]:
 
 
-def create_row_7(dap,scenario_inputs,df_all_init):
+def create_row_7(scenario_inputs,df_all_init):
     # Create data store that will hold the 2 main DataFrames for row 7
     data_store = dcc.Store(id='data_store')
     data_store_loading = dcc.Loading(
@@ -1086,7 +1091,8 @@ if __name__=='__main__':
     init_end_year = int(datetime.datetime.now().year)
     dft_dict_init = build_scenarios(init_end_year-1,init_end_year,init_low_pom,init_high_pom,
                                init_rebal_target,init_rebal_adjust)
-    df_all3_init,df_all_init = build_3d_display_df(dft_dict_init)
+#     df_all3_init,df_all_init = build_3d_display_df(dft_dict_init)
+    _,df_all_init = build_3d_display_df(dft_dict_init)
     
     
     
@@ -1097,7 +1103,7 @@ if __name__=='__main__':
     # *********** Assemble all of he rows and columns below ***************
 
     # ************ Create row 1 (the main title) *******************
-    r1 = create_row_1(dap)
+    r1 = create_row_1()
 
     # *************** Create row 2 ****************************
     r2,r2_link,r2c1_intuplist = create_row_2(dap)
@@ -1112,13 +1118,14 @@ if __name__=='__main__':
     all_links.append(r4_link)
     
     # *********** Create row 5 (title for scenario analysis in rows 6 and 7) ********************
-    r5 = create_row_5(dap)
+    r5 = create_row_5()
     
     # *********** Create row 6 ********************
-    r6,scenario_inputs = create_row_6(dap,df_all_init)
+    r6,scenario_inputs = create_row_6(df_all_init)
     
     # ******** Create row 7 (holds the multi scenario output graph and DataFrame) ******
-    r7_div_list,r7_link_list = create_row_7(dap,scenario_inputs,df_all_init)
+    r7_div_list,r7_link_list = create_row_7(scenario_inputs,df_all_init)
+    df_all_init = None
     all_links = all_links + r7_link_list
     
     all_rows = html.Div([r1,r2,r3,r4,r5,r6]+r7_div_list)
