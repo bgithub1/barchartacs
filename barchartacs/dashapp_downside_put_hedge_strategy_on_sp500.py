@@ -898,8 +898,11 @@ def create_row_2(dap):
 
     #  create a DashLink between r2c1 and the df_values DataFrame in r2c2    
     def _update_dt_values(input_data):
-        dft_new,df_values,_,_ = _get_df_values_from_input_data(input_data)
-        return [df_values.to_dict('rows')]
+        try:
+            dft_new,df_values,_,_ = _get_df_values_from_input_data(input_data)
+            return [df_values.to_dict('rows')]
+        except Exception as e:
+            dashapp.stop_callback(str(e))
         
     r2c1_intuplist = [(dpr_beg_date,'date'),(dpr_end_date,'date'),(put_otm_inputbox,'value'),
         (init_rebal_target_inputbox,'value'),(init_rebal_adjust_inputbox,'value')]
