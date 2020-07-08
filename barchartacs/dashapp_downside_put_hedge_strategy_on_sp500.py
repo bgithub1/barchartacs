@@ -1084,7 +1084,7 @@ def create_row_7(scenario_inputs,df_all_init):
 
 # In[23]:
 
-if __name__=='__main__':
+def make_app():
     panel_color = '#FFFFFA'
     all_links = []
     
@@ -1133,8 +1133,15 @@ if __name__=='__main__':
     # Add all of the DashLinks to the DashApp instance (dap)
     dap.add_links(all_links)
     # Create the dash app object by calling the create_app method of dap (the instance of DashApp)
-    dap.create_app(all_rows,app_title='downside_put_hedge_strategy',url_base_pathname='/dps/',app_port=8804)
+#     dap.create_app(all_rows,app_title='downside_put_hedge_strategy',url_base_pathname='/dps/',app_port=8804)
     
+    theapp = dap.create_app(all_rows,app_title='downside_put_hedge_strategy',run=False,url_base_pathname='/dps/')
+    return theapp
+
+app = make_app()
+server = app.server 
+if __name__=='__main__':
+    app.run_server(host='127.0.0.1',port=8804)
 
 
 
