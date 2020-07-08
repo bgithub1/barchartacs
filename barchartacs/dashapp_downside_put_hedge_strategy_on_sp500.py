@@ -62,7 +62,7 @@ import plotly.graph_objs as go
 # init_notebook_mode(connected=True)
 # import plotly.tools as tls
 
-# from plotly.graph_objs.layout import Font,Margin,Modebar
+from plotly.graph_objs.layout import Margin#,Font#,Modebar
 # from IPython import display
 
 import datetime
@@ -80,7 +80,7 @@ import pandas_datareader.data as pdr
 # from scipy.stats import norm
 
 # from ipysheet import from_dataframe,to_dataframe
-from dashapp import dashapp2 as dashapp
+from dashapp import dashapp2 as dashapp#@UnresolvedImport
 # import dash
 import dash_html_components as html
 import dash_core_components as dcc
@@ -104,7 +104,7 @@ redis_db = redis.Redis(host = 'localhost',port=6379,db=0)
 
 
 def get_redis_df(key):
-    context = pa.default_serialization_context()
+    context = pa.default_serialization_context()#@UndefinedVariable 
     df = context.deserialize(redis_db.get(key))
     return df
 
@@ -263,7 +263,7 @@ def calc_put_spread(
     The value will be negative if you are selling the spread b/c you are rolling
       the previous hedge backward (to a lower strike)
     '''
-     #black.black(flag, F, K, t, r, sigma)
+    #black.black(flag, F, K, t, r, sigma)
     atm_vol = atm_vol
     if (np.isnan(prev_hedge_strike)) or (prev_hedge_strike < current_hedge_strike):
         curr_strike_vol = atm_vol + .04 
@@ -330,12 +330,12 @@ def create_dft(put_perc_otm,years_to_hedge,
         df_spy = get_redis_df('df_spy')
         df_vix = get_redis_df('df_vix')
         df_1yr_rate = get_redis_df('df_1yr_rate')
-        df_div = get_redis_df('df_div')
+#         df_div = get_redis_df('df_div')
     else:
         df_spy = data_inputs.df_spy
         df_vix = data_inputs.df_vix
         df_1yr_rate = data_inputs.df_1yr_rate
-        df_div = data_inputs.df_div
+#         df_div = data_inputs.df_div
         
 
             
@@ -455,7 +455,7 @@ def create_dft(put_perc_otm,years_to_hedge,
 
 
 def create_comparative_returns(dft,years_to_hedge,rebal_target,rebal_adjust,pom=.14):
-    ret = {}
+#     ret = {}
     
     # Get the begin and end values of dft.close, using the lowest and highest dates
     row_min = dft[dft.settle_dt == dft.settle_dt.min()].iloc[0]
@@ -511,7 +511,7 @@ def create_comparative_returns(dft,years_to_hedge,rebal_target,rebal_adjust,pom=
             dollars_to_sell = stock_dollars - rebal_target*port
             new_stock_dollars = stock_dollars - dollars_to_sell
             new_cash = cash + dollars_to_sell
-            new_port = new_stock_dollars + new_cash
+#             new_port = new_stock_dollars + new_cash
             shares = new_stock_dollars/prices[i]
             cash = new_cash
             stock_dollars = new_stock_dollars
@@ -522,7 +522,7 @@ def create_comparative_returns(dft,years_to_hedge,rebal_target,rebal_adjust,pom=
             dollars_to_buy = rebal_target*port - stock_dollars
             new_stock_dollars = stock_dollars + dollars_to_buy
             new_cash = cash - dollars_to_buy
-            new_port = new_stock_dollars + new_cash
+#             new_port = new_stock_dollars + new_cash
             shares = new_stock_dollars/prices[i]
             cash = new_cash
             stock_dollars = new_stock_dollars
@@ -639,7 +639,7 @@ def _get_graph_stock_vs_cash_figure(input_data):
         {'dt':dates,'stock perc':stock_percs,
         '1 Dollar':port_per_day})
 
-    annualized_port_yield = df_values['return'].values[4]    
+#     annualized_port_yield = df_values['return'].values[4]    
     title = f"""Percent Stock<br>vs<br>Portfolio Value."""
     port_values_fig = plotly_plot(
         df_in=df_stock_perc,x_column='dt',yaxis2_cols=['1 Dollar'],
@@ -760,14 +760,6 @@ def build_scenarios(beg_year,end_year,low_pom,high_pom,rebal_target,rebal_adjust
 
     #   loop on increasing beg_year, but holding end_year constant
     dft_dict = {}
-#     for y in tqdm(beg_years):
-#         yyyymmdd_beg = int(y)*100*100 + 101 
-#         #    loop on pom
-#         for pom in [round(x,2) for x in np.arange(low_pom,high_pom+.01,.02)]:
-#             dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
-#                 yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust)
-#             dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
-#     return dft_dict
     data_inputs = DataInputs()
     for y in tqdm(beg_years):
         yyyymmdd_beg = int(y)*100*100 + 101 
@@ -776,7 +768,8 @@ def build_scenarios(beg_year,end_year,low_pom,high_pom,rebal_target,rebal_adjust
             dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
                 yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust,
                 data_inputs=data_inputs)
-            dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
+#             dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
+            dft_dict[(y,pom)] = [None,df_values,df_daily_values,df_rebalance_info] 
     return dft_dict
 
 # In[13]:
@@ -833,7 +826,7 @@ init_high_pom = .18
 init_rebal_target = .6
 init_rebal_adjust = .7
 init_years_to_hedge=1
-init_beg_year = 1997#1990
+init_beg_year = 1990
 init_beg_yyyymmdd = init_beg_year*100*100 + 701
 init_end_yyyymmdd = 203001010
 
@@ -1132,18 +1125,6 @@ if __name__=='__main__':
     # Create the dash app object by calling the create_app method of dap (the instance of DashApp)
     dap.create_app(all_rows,app_title='downside_put_hedge_strategy',url_base_pathname='/dps/',app_port=8804)
     
-    
-
-
-# ## END
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 
