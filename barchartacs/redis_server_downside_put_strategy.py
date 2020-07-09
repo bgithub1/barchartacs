@@ -16,7 +16,6 @@ warnings.filterwarnings("ignore")
 
 
 import pandas as pd
-import numpy as np
 
 import sys
 import os
@@ -26,14 +25,10 @@ if  not os.path.abspath('./') in sys.path:
 if  not os.path.abspath('../') in sys.path:
     sys.path.append(os.path.abspath('../'))
 
-from barchartacs import build_db
-from IPython import display
 
 import datetime
 from dateutil.relativedelta import relativedelta
-import io
 
-from tqdm import tqdm,tqdm_notebook
 
 from barchartacs import pg_pandas as pg
 from barchartacs import schedule_it as sch
@@ -54,8 +49,7 @@ import pyarrow as pa
 import redis
 
 import time
-import schedule_it
-
+import schedule_it#@UnresolvedImport
 
 # In[3]:
 
@@ -103,7 +97,7 @@ def fetch_history(symbol,dt_beg,dt_end):
     return df
 
 def update_redis_df(key,df):
-    context = pa.default_serialization_context()
+    context = pa.default_serialization_context()#@UndefinedVariable
     redis_db.set(key, context.serialize(df).to_buffer().to_pybytes())
 
 

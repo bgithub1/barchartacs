@@ -76,7 +76,7 @@ from py_vollib import black
 # from py_vollib.black import implied_volatility
 import pdb
 # import traceback
-import pandas_datareader.data as pdr
+# import pandas_datareader.data as pdr
 # from scipy.stats import norm
 
 # from ipysheet import from_dataframe,to_dataframe
@@ -133,22 +133,6 @@ def str_to_date(d,sep='-'):
     return dt
 
 
-# def fetch_history(symbol,dt_beg,dt_end):
-#     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
-#     # move index to date column, sort and recreate index
-#     df['date'] = df.index
-#     df = df.sort_values('date')
-#     df.index = list(range(len(df)))
-#     # make adj close the close
-#     df = df.drop(['Adj Close'],axis=1)
-#     cols = df.columns.values 
-#     cols_dict = {c:c[0].lower() + c[1:] for c in cols}
-#     df = df.rename(columns = cols_dict)
-#     df['settle_date'] = df.date.apply(str_to_yyyymmdd)
-#     return df
-
-
-# In[6]:
 
 
 def plotly_plot(df_in,x_column,plot_title=None,
@@ -313,6 +297,10 @@ class DataInputs():
         self.df_vix = get_redis_df('df_vix')
         self.df_1yr_rate = get_redis_df('df_1yr_rate')
         self.df_div = get_redis_df('df_div')
+
+class EveryScenario():
+    def __init__(self):
+        self.df_every_scenario = get_redis_df('df_every_scenario')        
 
 
 # def create_dft(put_perc_otm,years_to_hedge,
@@ -578,6 +566,7 @@ STYLE_TITLE={
 } 
 
 
+
 # #### Step 04: Create methods to convert input strings of:
 # 1. beg_date in format yyyy-mm-dd (e.g. 1990-01-02 for Jan 2nd, 1990)
 # 2. beg_date in format yyyy-mm-dd (e.g. 1990-01-02 for Jan 2nd, 1990)
@@ -630,7 +619,8 @@ def _get_df_values(yyyymmdd_beg,yyyymmdd_end,
     return dft_new,df_values,df_daily_values,df_rebalance_info
 
 def _get_graph_stock_vs_cash_figure(input_data):
-    dft_new,df_values,df_daily_values,_ = _get_df_values_from_input_data(input_data)
+#     dft_new,df_values,df_daily_values,_ = _get_df_values_from_input_data(input_data)
+    _,_,df_daily_values,_ = _get_df_values_from_input_data(input_data)
 
     stock_percs = df_daily_values.stock_perc.values
     dates =  df_daily_values.date.values
@@ -664,7 +654,8 @@ def _get_close_vs_hedge_figure(input_data):
     return fig_graph_close_vs_hedge_strike
 
 def _get_close_vs_hedge_stock_vs_cash_figure(input_data):
-    dft_new,df_values,df_daily_values,_ = _get_df_values_from_input_data(input_data)
+#     dft_new,df_values,df_daily_values,_ = _get_df_values_from_input_data(input_data)
+    dft_new,_,df_daily_values,_ = _get_df_values_from_input_data(input_data)
     df_daily_values['current_hedge_strike'] = dft_new.current_hedge_strike
     names = ['stock_perc','port_per_day','close','current_hedge_strike']
     x_columns = ['date' for _ in range(len(names))]
@@ -685,16 +676,49 @@ def _get_close_vs_hedge_stock_vs_cash_figure(input_data):
     )
     return fig
 
+# def _get_scenarios_data(input_data):
+#     beg_year = int(str(input_data[0]))
+#     end_year = int(str(input_data[1]))
+#     beg_pom = float(str(input_data[2]))
+#     end_pom = float(str(input_data[3]))  
+#     all3_query = f"(year>={beg_year}) and (year<={end_year}) and (pom>={beg_pom}) and (pom<={end_pom})"
+#     dft_dict = build_scenarios(beg_year,end_year,beg_pom,end_pom,.6,.7)
+#     df_all3,df_all = build_3d_display_df(dft_dict)
+#     df_all3_scenarios = df_all3.query(all3_query)
+#     return [{'df_all3':df_all3_scenarios.to_dict('rows'),'df_all':df_all.to_dict('rows')}]
+
+
+
 def _get_scenarios_data(input_data):
+    df_every_scenario = EveryScenario().df_every_scenario
     beg_year = int(str(input_data[0]))
     end_year = int(str(input_data[1]))
     beg_pom = float(str(input_data[2]))
     end_pom = float(str(input_data[3]))  
-    all3_query = f"(year>={beg_year}) and (year<={end_year}) and (pom>={beg_pom}) and (pom<={end_pom})"
-    dft_dict = build_scenarios(beg_year,end_year,beg_pom,end_pom,.6,.7)
-    df_all3,df_all = build_3d_display_df(dft_dict)
-    df_all3_scenarios = df_all3.query(all3_query)
-    return [{'df_all3':df_all3_scenarios.to_dict('rows'),'df_all':df_all.to_dict('rows')}]
+    
+    yb = df_every_scenario.year_beg>=beg_year
+    ye = df_every_scenario.year_end==end_year
+    bp = df_every_scenario.pom>=beg_pom
+    ep = df_every_scenario.pom<=end_pom
+    df_all = df_every_scenario[yb & ye & bp & ep]
+    cols = ['year_beg','pom','no_hedge_current','no_hedge_highest','with_hedge_current','rebalanced_current']
+    df_all = df_all[cols]
+    df_all = df_all.rename(columns={'year_beg':'year'})
+
+    df_all2 = df_all[['year','pom','no_hedge_current']].copy()
+    df_all2 = df_all2.rename(columns={'no_hedge_current':'ret'})
+    df_all2['ret_type'] = 'no_hedge_current'
+    df_all2.index = list(range(len(df_all2)))
+    for c in ['no_hedge_highest','with_hedge_current','rebalanced_current']:
+        df_temp = df_all[['year','pom',c]].copy()
+        df_temp.index=list(range(len(df_temp)))
+        df_temp = df_temp.rename(columns={c:'ret'})
+        df_temp['ret_type'] = c
+        df_all2 = df_all2.append(df_temp,ignore_index=True)
+        df_all2.index = list(range(len(df_all2)))
+    df_all2.ret_type.unique()
+    df_all3 = df_all2.query("ret_type in ['with_hedge_current','rebalanced_current']")
+    return [{'df_all3':df_all3.to_dict('rows'),'df_all':df_all.to_dict('rows')}]
     
 def _get_scenarios_figure_from_data(input_data):
     df_all3_scenarios = pd.DataFrame(input_data[0]['df_all3'])
@@ -766,7 +790,8 @@ def build_scenarios(beg_year,end_year,low_pom,high_pom,rebal_target,rebal_adjust
         yyyymmdd_beg = int(y)*100*100 + 101 
         #    loop on pom
         for pom in [round(x,2) for x in np.arange(low_pom,high_pom+.01,.02)]:
-            dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
+#             dft_new,df_values,df_daily_values,df_rebalance_info =_get_df_values(
+            _,df_values,df_daily_values,df_rebalance_info =_get_df_values(
                 yyyymmdd_beg,yyyymmdd_end,pom,rebal_target,rebal_adjust,
                 data_inputs=data_inputs)
 #             dft_dict[(y,pom)] = [dft_new,df_values,df_daily_values,df_rebalance_info] 
@@ -851,8 +876,9 @@ Various Buy and Hold Strategies"""
 # create row 2
 def create_row_2(dap):
     # ************ Create comparative returns data *******************
-    dft_new,df_values,df_daily_values,df_rebalance_info = _get_df_values(
+#     dft_new,df_values,df_daily_values,df_rebalance_info = _get_df_values(
 #         init_beg_yyyymmdd,dt_to_yyyymmdd(datetime.datetime.now()),
+    dft_new,df_values,_,_ = _get_df_values(
         init_beg_yyyymmdd,init_end_yyyymmdd,
         init_put_perc_otm,init_rebal_target,init_rebal_adjust,
         years_to_hedge=init_years_to_hedge)
@@ -944,7 +970,8 @@ def create_row_3(dap,r2c1_intuplist):
 
 # create row 4
 def create_row_4(dap):
-    dft_new,df_values,df_daily_values,df_rebalance_info = _get_df_values(
+#     dft_new,df_values,df_daily_values,df_rebalance_info = _get_df_values(
+    dft_new,_,_,_ = _get_df_values(
         init_beg_yyyymmdd,init_end_yyyymmdd,
         init_put_perc_otm,init_rebal_target,init_rebal_adjust,
         years_to_hedge=init_years_to_hedge)
@@ -1085,15 +1112,15 @@ def create_row_7(scenario_inputs,df_all_init):
 # In[23]:
 
 def make_app():
-    panel_color = '#FFFFFA'
+#     panel_color = '#FFFFFA'
     all_links = []
     
-    init_end_year = int(datetime.datetime.now().year)
-    dft_dict_init = build_scenarios(init_end_year-1,init_end_year,init_low_pom,init_high_pom,
-                               init_rebal_target,init_rebal_adjust)
-#     df_all3_init,df_all_init = build_3d_display_df(dft_dict_init)
-    _,df_all_init = build_3d_display_df(dft_dict_init)
+#     init_end_year = int(datetime.datetime.now().year)
+#     dft_dict_init = build_scenarios(init_end_year-1,init_end_year,init_low_pom,init_high_pom,
+#                                init_rebal_target,init_rebal_adjust)
+#     _,df_all_init = build_3d_display_df(dft_dict_init)
     
+    df_all_init = pd.DataFrame(_get_scenarios_data([1990,2020,.1,.18])[0]['df_all'])
     
     
     # Create an instance of DashApp, which holds all of the html and dcc elements, 
