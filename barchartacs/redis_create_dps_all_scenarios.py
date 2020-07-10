@@ -481,7 +481,7 @@ def update_db():
 
 if __name__=='__main__':
     h = 19 if len(sys.argv)<2 else int(sys.argv[1])
-    update_db()
+#     update_db()
     schedule_updates(h,update_db)
 
 
