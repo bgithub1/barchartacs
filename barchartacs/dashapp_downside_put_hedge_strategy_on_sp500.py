@@ -1152,17 +1152,59 @@ def make_app():
     
     # ******** Create row 7 (holds the multi scenario output graph and DataFrame) ******
     r7_div_list,r7_link_list = create_row_7(scenario_inputs,df_all_init)
-    df_all_init = None
-    all_links = all_links + r7_link_list
-    
-    all_rows = html.Div([r1,r2,r3,r4,r5,r6]+r7_div_list)
 
+    df_all_init = None
+
+#*****
+    
+    tabs_styles = {
+    'height': '44px'
+    }
+    tab_style = {
+        'borderBottom': '1px solid #d6d6d6',
+        'padding': '6px',
+        'fontWeight': 'bold'
+    }
+
+    tab_selected_style = {
+        'borderTop': '1px solid #d6d6d6',
+        'borderBottom': '1px solid #d6d6d6',
+        'backgroundColor': '#119DFF',
+        'color': 'white',
+        'padding': '6px'
+    }
+
+    tab1_text="""CLICK for: S&P Portfolios with/without Protection"""
+    tab2_text="""CLICK for: Put Protect vs 60/40 Returns Scenarios"""
+    tab_divs = html.Div([r1,
+        dcc.Tabs(id='tabs-example', value='tab-1', children=[
+            dcc.Tab(label=tab1_text, value='tab-1', style=tab_style, selected_style=tab_selected_style),
+            dcc.Tab(label=tab2_text, value='tab-2', style=tab_style, selected_style=tab_selected_style),
+        ]),
+        html.Div(id='tabs-example-content')
+    ])
+    
+    def _render_tab(input_data):
+        tab = input_data[0]
+        if tab == 'tab-1':
+            return [html.Div([r2,r3])]
+        elif tab == 'tab-2':
+            return [html.Div([r6]+r7_div_list)]
+    
+    tabs_link = dashapp.DashLink([('tabs-example','value')],
+                         [('tabs-example-content','children')],
+                        _render_tab)
+        
+#****   
+#     all_links = all_links + r7_link_list  
+#     all_rows = html.Div([r1,r2,r3,r4,r5,r6]+r7_div_list)
+ 
+    all_links = all_links + r7_link_list + [tabs_link]
     # Add all of the DashLinks to the DashApp instance (dap)
     dap.add_links(all_links)
-    # Create the dash app object by calling the create_app method of dap (the instance of DashApp)
-#     dap.create_app(all_rows,app_title='downside_put_hedge_strategy',url_base_pathname='/dps/',app_port=8804)
-    
-    theapp = dap.create_app(all_rows,app_title='downside_put_hedge_strategy',run=False,url_base_pathname='/dps/')
+    # Create the dash app object by calling the create_app method of dap (the instance of DashApp)        #
+#     theapp = dap.create_app(all_rows,app_title='downside_put_hedge_strategy',run=False,url_base_pathname='/dps/')    
+    theapp = dap.create_app(tab_divs,app_title='downside_put_hedge_strategy',run=False,url_base_pathname='/dps/')    
     return theapp
 
 app = make_app()
