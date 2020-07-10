@@ -474,14 +474,19 @@ def update_db():
             df_every_scenario = df_1.copy()
         else:
             df_every_scenario = df_every_scenario.append(df_1,ignore_index=True)
-        df_every_scenario.index = list(range(len(df_every_scenario)))    
+        df_every_scenario.index = list(range(len(df_every_scenario))) 
+        df_every_scenario.to_csv('df_every_scenario.csv',index=False)
     update_redis_df('df_every_scenario',df_every_scenario)    
 
 
 
 if __name__=='__main__':
     h = 19 if len(sys.argv)<2 else int(sys.argv[1])
-#     update_db()
+    if os.path.isfile('df_every_scenario.csv'):
+        df_every_scenario = pd.read_csv('df_every_scenario.csv')
+        update_redis_df('df_every_scenario',df_every_scenario)
+    else:
+        update_db()
     schedule_updates(h,update_db)
 
 
