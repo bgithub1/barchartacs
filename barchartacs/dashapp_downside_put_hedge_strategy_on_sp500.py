@@ -870,7 +870,19 @@ Various Buy and Hold Strategies"""
     return r1
 
 
-# In[17]:
+def df_values_to_df_strategy(df_values):
+    df_strategy_compare = df_values.copy()    
+    df_strategy_compare = df_strategy_compare.iloc[1:]
+    df_strategy_compare.return_type = [
+        'Long 100% SP500 (Current)',
+        'Long 100% SP500 (Highest)',
+        'Put Protected 100% SP500 (Current)',
+        'SP500 (x%) and 1 Yr Treasury (y%) (Current)'
+    ]
+    
+    df_strategy_compare.columns = [' '.join([w[0].upper()+w[1:] for w in c.split('_')]) for c in df_strategy_compare.columns.values]
+    
+    return df_strategy_compare
 
 
 # create row 2
@@ -882,7 +894,9 @@ def create_row_2(dap):
         init_beg_yyyymmdd,init_end_yyyymmdd,
         init_put_perc_otm,init_rebal_target,init_rebal_adjust,
         years_to_hedge=init_years_to_hedge)
-    dt_values,_ = dashapp.make_dashtable('dt_values',df_in=df_values,max_width=None)
+#     dt_values,_ = dashapp.make_dashtable('dt_values',df_in=df_values,max_width=None)
+    df_strategy_compare = df_values_to_df_strategy(df_values)
+    dt_values,_ = dashapp.make_dashtable('dt_values',df_in=df_strategy_compare,max_width=None)
 
     
     # ************ Create row 2 (the strategy results from one example run ) *********
@@ -927,7 +941,9 @@ def create_row_2(dap):
     def _update_dt_values(input_data):
         try:
             dft_new,df_values,_,_ = _get_df_values_from_input_data(input_data)
-            return [df_values.to_dict('rows')]
+#             return [df_values.to_dict('rows')]
+            df_strategy_compare = df_values_to_df_strategy(df_values)
+            return [df_strategy_compare.to_dict('rows')]
         except Exception as e:
             dashapp.stop_callback(str(e))
         
@@ -1077,8 +1093,12 @@ def create_row_7(scenario_inputs,df_all_init):
         """All Data""",
         html_container=html.H3) 
     # Create the DashLink linked the DataFrame with row 6 inputs
+    df_all_put_protect_vs_rebalanced = df_all_init[['year','pom','with_hedge_current','rebalanced_current']] 
+    df_all_put_protect_vs_rebalanced.with_hedge_current = df_all_put_protect_vs_rebalanced.with_hedge_current.round(4)
+    df_all_put_protect_vs_rebalanced.rebalanced_current = df_all_put_protect_vs_rebalanced.rebalanced_current.round(4)
     dt_multi_scenarios,dt_multi_scenarios_nav_link = dashapp.make_dashtable(
-        "dt_multi_scenarios",df_all_init,input_store=data_store,
+        "dt_multi_scenarios",df_all_put_protect_vs_rebalanced,
+        input_store=data_store,
         input_store_key='df_all',max_width=None)
     
     # Assemble row 7
