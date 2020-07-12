@@ -540,6 +540,7 @@ def create_comparative_returns(dft,years_to_hedge,rebal_target,rebal_adjust,pom=
     end_port_value = port_per_day[-1]
     beg_port_value = port_per_day[0]
     annualized_port_yield = round((end_port_value/beg_port_value)**(1/total_years) - 1,3)
+    end_port_dollar_value = prices[1]*end_port_value
     return_types = [
         'total years',
         'annualized current return',
@@ -548,7 +549,8 @@ def create_comparative_returns(dft,years_to_hedge,rebal_target,rebal_adjust,pom=
         f'rebalanced ({int(rebal_target*100)}%,{int(rebal_adjust*100)}%) portfolio end value']
     df_values = pd.DataFrame({
         'return_type':return_types,
-        'current_value':[total_years,curr_value,highest_high_value,hedged_value,end_port_value],
+#         'current_value':[total_years,curr_value,highest_high_value,hedged_value,end_port_value],
+        'current_value':[total_years,curr_value,highest_high_value,hedged_value,end_port_dollar_value],
         'return':[0,curr_return,highest_return_no_hedge,hedged_return,annualized_port_yield]})
     return df_values,df_daily_values,df_rebalance_info
 
@@ -656,7 +658,9 @@ def _get_close_vs_hedge_figure(input_data):
 def _get_close_vs_hedge_stock_vs_cash_figure(input_data):
 #     dft_new,df_values,df_daily_values,_ = _get_df_values_from_input_data(input_data)
     dft_new,_,df_daily_values,_ = _get_df_values_from_input_data(input_data)
+    initial_rebalanced_portfolio_value = dft_new.close.values[0]
     df_daily_values['current_hedge_strike'] = dft_new.current_hedge_strike
+    df_daily_values.port_per_day = df_daily_values.port_per_day * initial_rebalanced_portfolio_value
     names = ['stock_perc','port_per_day','close','current_hedge_strike']
     x_columns = ['date' for _ in range(len(names))]
     yp_rows = [1,1,1,1]
@@ -666,8 +670,9 @@ def _get_close_vs_hedge_stock_vs_cash_figure(input_data):
     df_yp = pd.DataFrame({'name':names,'x_column':x_columns,
                       'row':yp_rows,'col':yp_cols,'is_secondary':yp_secondary,
                      'yaxis_title':yp_yaxis_titles})
-    sp_titles = ['Stock Perc vs Portfolio Value','S&P Price vs Hedge Strike']
-    fig =  dashapp.plotly_subplots(df_daily_values,df_yp,title="Portfolio Analysis",
+    sp_titles = ['History of Rebalancing','History of Put Purchases']
+    fig_title = "Stock/Cash Portfolio  vs Put Protected Portfolio"
+    fig =  dashapp.plotly_subplots(df_daily_values,df_yp,title=fig_title,
                       num_ticks_to_display=10,subplot_titles=sp_titles) 
     fig = go.Figure(fig)
     fig.update_layout(
