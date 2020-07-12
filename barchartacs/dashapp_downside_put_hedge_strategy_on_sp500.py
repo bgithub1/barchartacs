@@ -875,14 +875,14 @@ Various Buy and Hold Strategies"""
     return r1
 
 
-def df_values_to_df_strategy(df_values):
+def df_values_to_df_strategy(df_values,stock_perc=.6):
     df_strategy_compare = df_values.copy()    
     df_strategy_compare = df_strategy_compare.iloc[1:]
     df_strategy_compare.return_type = [
         'Long 100% SP500 (Current)',
         'Long 100% SP500 (Highest)',
         'Put Protected 100% SP500 (Current)',
-        'SP500 (x%) and 1 Yr Treasury (y%) (Current)'
+        f'SP500 ({round(stock_perc*100,2)}%) and 1 Yr Treasury ({round((1-stock_perc)*100,2)}%) (Current)'
     ]
     
     df_strategy_compare.columns = [' '.join([w[0].upper()+w[1:] for w in c.split('_')]) for c in df_strategy_compare.columns.values]
@@ -900,7 +900,7 @@ def create_row_2(dap):
         init_put_perc_otm,init_rebal_target,init_rebal_adjust,
         years_to_hedge=init_years_to_hedge)
 #     dt_values,_ = dashapp.make_dashtable('dt_values',df_in=df_values,max_width=None)
-    df_strategy_compare = df_values_to_df_strategy(df_values)
+    df_strategy_compare = df_values_to_df_strategy(df_values,stock_perc=init_rebal_target)
     dt_values,_ = dashapp.make_dashtable('dt_values',df_in=df_strategy_compare,max_width=None)
 
     
@@ -947,7 +947,8 @@ def create_row_2(dap):
         try:
             dft_new,df_values,_,_ = _get_df_values_from_input_data(input_data)
 #             return [df_values.to_dict('rows')]
-            df_strategy_compare = df_values_to_df_strategy(df_values)
+            rebal_target = float(str(input_data[3]))
+            df_strategy_compare = df_values_to_df_strategy(df_values,stock_perc=rebal_target)
             return [df_strategy_compare.to_dict('rows')]
         except Exception as e:
             dashapp.stop_callback(str(e))
