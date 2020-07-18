@@ -347,19 +347,23 @@ if __name__=='__main__':
 
     # write csv files
     # NOW WRITE THIS DATA FOR THIS YEAR
-    df_all_options.to_csv(CSV_TEMP_PATH_OPTIONS,index=False)
+    if df_all_options is not None:
+        df_all_options.to_csv(CSV_TEMP_PATH_OPTIONS,index=False)
     # for futures only use those commod codes in fut_contract_list
-    df_all_futures = df_all_futures[df_all_futures.symbol.str[0:-3].isin(fut_contract_list)]
-    df_all_futures.to_csv(CSV_TEMP_PATH_FUTURES,index=False)
+    if df_all_futures is not None:
+        df_all_futures = df_all_futures[df_all_futures.symbol.str[0:-3].isin(fut_contract_list)]
+        df_all_futures.to_csv(CSV_TEMP_PATH_FUTURES,index=False)
 
 
 
     if WRITE_TO_POSTGRES:
-        logger.info(f"MAIN LOOP: writing options data to database")
-        abspath = os.path.abspath(CSV_TEMP_PATH_OPTIONS)
-        psql_copy(pga,OPTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
-        logger.info(f"MAIN LOOP: writing futures data to database")
-        abspath = os.path.abspath(CSV_TEMP_PATH_FUTURES)
-        psql_copy(pga,FUTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
+        if df_all_options is not None:
+            logger.info(f"MAIN LOOP: writing options data to database")
+            abspath = os.path.abspath(CSV_TEMP_PATH_OPTIONS)
+            psql_copy(pga,OPTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
+        if df_all_futures is not None:
+            logger.info(f"MAIN LOOP: writing futures data to database")
+            abspath = os.path.abspath(CSV_TEMP_PATH_FUTURES)
+            psql_copy(pga,FUTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
 
 
