@@ -20,23 +20,24 @@ def make_app(host,port,basepath):
         logger=logger,run=False)
     return dict_app['app']
 
-parser =  ap.ArgumentParser()
-parser.add_argument('--host',type=str,
-                    help='host (default 127.0.0.1)',
-                    default='127.0.0.1')
-parser.add_argument('--port',type=int,
-                    help='port (default 8811)',
-                    default=8811)
-parser.add_argument('--basepath',type=str,
-                    help='url_base_pathname (default app8811)',
-                    default='/app8811/')
-
-args = parser.parse_args()
-host = args.host
-port = args.port
-basepath = args.basepath
-app = make_app(host, port, basepath)
+app = make_app('127.0.0.1', 8811, '/app8811/')
 server = app.server
 if __name__=='__main__':
-    app.run_server(host=host,port=port)
+#     parser =  ap.ArgumentParser()
+#     parser.add_argument('--host',type=str,
+#                         help='host (default 127.0.0.1)',
+#                         default='127.0.0.1')
+#     parser.add_argument('--port',type=int,
+#                         help='port (default 8811)',
+#                         default=8811)
+#     parser.add_argument('--basepath',type=str,
+#                         help='url_base_pathname (default app8811)',
+#                         default='/app8811/')
+#     
+#     args = parser.parse_args()
+#     host = args.host
+#     port = args.port
+#     basepath = args.basepath
+#     app = make_app(host, port, basepath)
+    app.run_server(host='127.0.0.1',port=8811)
     
