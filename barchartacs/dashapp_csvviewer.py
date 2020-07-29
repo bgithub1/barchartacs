@@ -6,7 +6,23 @@ Created on Jul 24, 2020
 from dashapp import single_page_from_df as spfd#@UnresolvedImport
 import argparse as ap
 
+def make_app(host,port,basepath):
+    if basepath[0] != '/':
+        basepath[0] = '/'
+    if basepath[-1] != '/':
+        basepath[-1] = '/'
+    logger = spfd.dashapp.init_root_logger()    
+    dict_app = spfd.graph_from_csv_page(
+        main_id='myid',app_port = port,
+        app_host = host,
+        app_title="csv_grapher",
+        url_base_pathname=basepath,
+        logger=logger,run=False)
+    return dict_app['app']
+
+
 if __name__=='__main__':
+    global server
     parser =  ap.ArgumentParser()
     parser.add_argument('--host',type=str,
                         help='host (default 127.0.0.1)',
@@ -22,14 +38,7 @@ if __name__=='__main__':
     host = args.host
     port = args.port
     basepath = args.basepath
-    if basepath[0] != '/':
-        basepath[0] = '/'
-    if basepath[-1] != '/':
-        basepath[-1] = '/'
-    logger = spfd.dashapp.init_root_logger()    
-    spfd.graph_from_csv_page(
-        main_id='myid',app_port = port,
-        app_host = host,
-        app_title="csv_grapher",
-        url_base_pathname=basepath,
-        logger=logger)
+    app = make_app(host, port, basepath)
+    server = app.server
+    app.run_server(host=host,port=port)
+    
