@@ -20,9 +20,8 @@ def make_app(host,port,basepath):
         logger=logger,run=False)
     return dict_app['app']
 
-
+global server
 if __name__=='__main__':
-    global server
     parser =  ap.ArgumentParser()
     parser.add_argument('--host',type=str,
                         help='host (default 127.0.0.1)',
