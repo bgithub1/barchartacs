@@ -11,6 +11,7 @@ from dash.exceptions import PreventUpdate
 import dash_table
 import numpy as np
 import pandas as pd
+from openpyxl.utils.cell import rows_from_range
 thisdir = os.path.abspath('.')
 thisparentdir = os.path.abspath('../')
 if thisdir not in sys.path:
@@ -30,7 +31,7 @@ if len(args)>2:
 
 # get pga
 pga = db_info.get_db_info(config_name=config_name)
-ROWS_FOR_DASHTABLE=1000
+ROWS_FOR_DASHTABLE=300
 MAIN_ID = 'tdb'
 
 # Create app.
@@ -63,11 +64,21 @@ def _make_dt(dt_id,df,displayed_rows=100,page_action='native'):
     dt.columns=[{"name": i, "id": i} for i in df.columns.values]                    
     return dt
 
+btn_run = html.Button(children="RUN QUERY",id=_mkid('btn_run'))
+
+num_rows_input = dcc.Input(
+    id=_mkid('num_rows_input'),debounce=True,
+    value=ROWS_FOR_DASHTABLE,type='number',
+    min=100, max=ROWS_FOR_DASHTABLE*2, step=100,
+    style = dict(width = '10%',display = 'table-cell')
+)
+
 # create input box for sql select (WITHOUT THE WORD SELECT)
+select_input_store = dcc.Store(id=_mkid('select_input_store'))
 select_input = dcc.Input(
     id=_mkid('select_input'),debounce=True,
     placeholder="Enter sql select statement (without the word select)",
-    style = dict(width = '50%',display = 'table-cell')
+    style = dict(width = '70%',display = 'table-cell')
 )
 
 main_store = dcc.Store(id=_mkid('main_store'))
@@ -78,12 +89,27 @@ dt_data = _make_dt(
 
 dt_data_div = html.Div([dt_data],_mkid('dt_data_div'))
 
-app.layout = html.Div([select_input, 
+app.layout = html.Div([html.Span([btn_run,num_rows_input,select_input,select_input_store]),
     dcc.Loading(children=[main_store,dt_data_div], fullscreen=True, type="dot")])
 
+@app.callback(
+    Output(select_input_store.id,'data'),
+    Input(select_input.id,'value')
+    )
+def _capture_sql_input(sql):
+    return sql
+
+@app.callback(
+    [Output(dt_data.id,'page_size')],
+    [Input(num_rows_input.id,'value')]
+)
+def _update_page_size(value):
+    print(f"_update_page_size: {value}")
+    return value
+
 @app.callback([ServersideOutput(main_store.id, "data")],
-              Trigger(select_input.id, "n_submit"),
-              State(select_input.id,'value'))
+              Trigger(btn_run.id, "n_clicks"),
+              State(select_input_store.id,'data'))
 def _query(sql):
     print(f"_query sql: {sql}")
     if sql is None or len(sql)<1:
@@ -96,16 +122,19 @@ def _query(sql):
 
 @app.callback([Output(dt_data.id,'data'),Output(dt_data.id,'columns'),
                Output(dt_data.id,'page_count')], 
-              [Input(main_store.id, "data"),Input(dt_data.id,'page_current'),
-               Input(dt_data.id,'page_size')])
+              [Input(main_store.id, "data"),Input(dt_data.id,'page_current')],
+              [State(dt_data.id,'page_size')])
 def display_df(df, page_current,page_size):
-    pagcur = page_current
+    print(f"entering display_df: {len(df)} {page_size}")
+    pagcur = int(str(page_current))
     if (pagcur is None) or (pagcur<0):
         pagcur = 0
-    ps = page_size
-    if (ps is None) or (ps<1):
-        ps = ROWS_FOR_DASHTABLE
-    beg_row = page_current*page_size
+    ps = ROWS_FOR_DASHTABLE
+    
+    if (page_size is not None):
+        ps = int(str(page_size))
+    
+    beg_row = pagcur*ps
     if pagcur*ps > len(df):
         beg_row = len(df) - ps
 
