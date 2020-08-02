@@ -11,7 +11,7 @@ from dash.exceptions import PreventUpdate
 import dash_table
 import numpy as np
 import pandas as pd
-from openpyxl.utils.cell import rows_from_range
+
 thisdir = os.path.abspath('.')
 thisparentdir = os.path.abspath('../')
 if thisdir not in sys.path:
