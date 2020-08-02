@@ -1,0 +1,162 @@
+comp,amt,date,category
+Hertz,25800000,May 22 ,Travel Lodging and Leisure
+Latam Airlines,21100000,May 25 ,Travel Lodging and Leisure
+Frontier Communications,17400000,April 14 ,Telecoms Media and Technology
+Chesapeake,16200000,June 28 ,Energy
+Ascena Retail,13700000,July 23 ,Retail and Restaurants
+J.C. Penney,8600000,May 15 ,Retail and Restaurants
+Whiting Petroleum,7600000,April 1 ,Energy
+Avianca Holdings,7300000,May 10 ,Travel Lodging and Leisure
+Noble Corp.,7300000,July 31 ,Energy
+Diamond Offshore Drilling,5800000,April 26 ,Energy
+Denbury Resources,4600000,July 30 ,Energy
+California Resources,4100000,July 15 ,Energy
+Hornbeck Offshore Services,2700000,May 19 ,Energy
+Covia Holdings,2500000,June 29 ,Industrials Materials Equipment and Parts
+Unit,2100000,May 22 ,Energy
+Centric Brands,1900000,May 18 ,Retail and Restaurants
+CEC,1700000,June 24 ,Entertainment
+LSC Communications,1600000,April 13 ,Other
+Briggs & Stratton,1600000,July 20 ,Industrials Materials Equipment and Parts
+Ultra Petroleum,1300000,May 14 ,Energy
+24 Hour Fitness Worldwide,1000000,June 15 ,Travel Lodging and Leisure
+Foresight,1000000,March 10 ,Energy
+OneWeb Holdings,1000000,March 27 ,Telecoms Media and Technology
+J Crew,1000000,May 4 ,Retail and Restaurants
+Neiman Marcus,1000000,May 7 ,Retail and Restaurants
+Gavilan Resources,1000000,May 15 ,Energy
+Extraction Oil & Gas,1000000,June 14 ,Energy
+WorldStrides,1000000,July 20 ,Travel Lodging and Leisure
+Chisholm Oil & Gas,1000000,June 17 ,Energy
+Sable Permian Resources,1000000,June 25 ,Energy
+Grupo Famsa,1000000,June 26 ,Retail and Restaurants
+Grupo Aeromexico,1000000,June 30 ,Travel Lodging and Leisure
+NPC International,1000000,July 1 ,Retail and Restaurants
+Bruin E&P Partners,1000000,July 16 ,Energy
+Pyxus International,1000000,June 15 ,Other
+Hi-Crush,953100,July 12 ,Energy
+GNC Holdings,895000,June 23 ,Retail and Restaurants
+Rosehill Resources,872500,July 26 ,Energy
+Global Eagle,630500,July 22 ,Entertainment
+Exide Technologies,500000,May 19 ,Industrials Materials Equipment and Parts
+SpeedCast International,500000,April 23 ,Telecoms Media and Technology
+Stage Stores,500000,May 10 ,Retail and Restaurants
+Mood Media,500000,July 30 ,Other
+Brooks Brothers,500000,July 8 ,Retail and Restaurants
+BJ Services,500000,July 20 ,Energy
+American Addiction Centers,449300,June 20 ,Health and Personal Care
+Jason Industries,428400,June 24 ,Industrials Materials Equipment and Parts
+New York & Co.,405400,July 13 ,Retail and Restaurants
+Endologix,279600,July 5 ,Health and Personal Care
+Lilis,258600,June 28 ,Energy
+VIVUS,213900,July 7 ,Health and Personal Care
+IMH Financial,122000,July 23 ,Other
+Longview Intermediate Holdings,100000,April 14 ,Energy
+Klausner Lumber One,100000,April 30 ,Industrials Materials Equipment and Parts
+Rubie’s Costume,100000,April 30 ,Retail and Restaurants
+Cinemex Holdings USA,100000,April 25 ,Entertainment
+Art Van Furniture,100000,April 3 ,Retail and Restaurants
+True Religion Apparel,100000,April 13 ,Retail and Restaurants
+Pace Industries,100000,April 12 ,Industrials Materials Equipment and Parts
+Ravn Air,100000,April 5 ,Travel Lodging and Leisure
+Techniplas,100000,May 6 ,Industrials Materials Equipment and Parts
+The Roman Catholic Church for the Archdiocese of New Orleans,100000,May 1 ,Other
+Templar,100000,June 1 ,Energy
+Advantage Holdings,100000,May 26 ,Travel Lodging and Leisure
+Le Pain Quotidien (U.S. subsidiary),100000,May 27 ,Retail and Restaurants
+Libbey,100000,June 1 ,Retail and Restaurants
+APC Automotive Technologies,100000,June 3 ,Industrials Materials Equipment and Parts
+Vista Proppants and Logistics,100000,June 9 ,Energy
+Proteus Digital Health,100000,June 15 ,Telecoms Media and Technology
+Lucky Brand Dungarees,100000,July 3 ,Retail and Restaurants
+Sur La Table,100000,July 8 ,Retail and Restaurants
+Engineered Propulsion Systems,100000,July 29 ,Industrials Materials Equipment and Parts
+California Pizza Kitchen,100000,July 29 ,Retail and Restaurants
+Tuesday Morning,92000,May 27 ,Retail and Restaurants
+Apex Parks Group,50000,April 8 ,Entertainment
+Toojay’s Management,50000,April 29 ,Retail and Restaurants
+Garden Fresh Restaurants,50000,May 14 ,Retail and Restaurants
+Midtown Campus Properties,50000,May 8 ,Other
+Gold’s Gym International,50000,May 4 ,Travel Lodging and Leisure
+Old Time Pottery,50000,June 28 ,Retail and Restaurants
+Congoleum,50000,July 13 ,Industrials Materials Equipment and Parts
+Il Mulino New York,50000,July 28 ,Retail and Restaurants
+Muji USA,50000,July 10 ,Retail and Restaurants
+Sustainable Restaurant Group,10000,May 12 ,Retail and Restaurants
+Alaska Urological Institute,10000,March 25 ,Health and Personal Care
+402-420 Metropolitan Ave,10000,April 1 ,Other
+FoodFirst Restaurants,10000,April 10 ,Retail and Restaurants
+Alpha,10000,April 13 ,Entertainment
+Yuma,10000,April 15 ,Energy
+Diamondback Industries,10000,April 21 ,Energy
+John Varvatos Enterprises,10000,May 6 ,Retail and Restaurants
+Galileo Learning,10000,May 6 ,Other
+CFRA Holdings,10000,May 6 ,Retail and Restaurants
+138 QB Acquisition,10000,April 6 ,Other
+Vision Group Holdings,10000,May 29 ,Health and Personal Care
+The Paper Store,10000,July 14 ,Retail and Restaurants
+Global Keg,10000,July 23 ,Retail and Restaurants
+Klausner Lumber Two,10000,June 10 ,Industrials Materials Equipment and Parts
+Patriot Well Solutions,10000,July 21 ,Energy
+Serendipity Labs,10000,July 15 ,Other
+RE Palm Springs II,10000,July 22 ,Travel Lodging and Leisure
+Apex Linen Service,10000,July 6 ,Travel Lodging and Leisure
+Luxury Dining Group,10000,July 3 ,Retail and Restaurants
+Juniper Specialty Products,10000,June 19 ,Energy
+Petersen-Dean,10000,June 11 ,Industrials Materials Equipment and Parts
+Alamo Drafthouse franchisee (Phoenix area),5800,May 13 ,Entertainment
+Legacy Global Sports,2100,May 20 ,Entertainment
+Sugar Factory Ocean Drive,2000,July 22 ,Retail and Restaurants
+Creative Hairdressers,1000,April 23 ,Health and Personal Care
+Field of Flowers,1000,July 7 ,Retail and Restaurants
+Hologenix,1000,April 22 ,Industrials Materials Equipment and Parts
+United Cannabis,1000,April 20 ,Health and Personal Care
+USA Rugby,1000,March 31 ,Other
+Miami Air International,1000,March 24 ,Travel Lodging and Leisure
+A La Turka Restaurant,1000,July 15 ,Retail and Restaurants
+Rudy’s Barbershop,1000,April 2 ,Health and Personal Care
+Bounce For Fun,1000,June 17 ,Entertainment
+Players Network,1000,June 17 ,Entertainment
+Twisted Root Burger (Arlington),1000,June 8 ,Retail and Restaurants
+Twisted Root Burger (Carrollton),1000,June 8 ,Retail and Restaurants
+Latino Kids Health,1000,May 29 ,Health and Personal Care
+Schreiner’s Fine Sausages,1000,May 26 ,Retail and Restaurants
+Walker Service,1000,March 27 ,Other
+Superior Air Charter,1000,April 28 ,Travel Lodging and Leisure
+Wave Computing,1000,April 27 ,Telecoms Media and Technology
+Barfly Ventures,1000,June 3 ,Retail and Restaurants
+J Hilburn,1000,April 30 ,Retail and Restaurants
+Upgrade Labs,1000,June 16 ,Health and Personal Care
+Occasion Brands,1000,July 22 ,Retail and Restaurants
+Featherstone Foods,1000,July 20 ,Retail and Restaurants
+Live Primary,1000,July 12 ,Other
+Sethco,1000,July 10 ,Retail and Restaurants
+Days Inn by Wyndham Austin South,1000,July 6 ,Travel Lodging and Leisure
+G-Star Raw Retail,1000,July 3 ,Retail and Restaurants
+Feck Properties,1000,July 2 ,Travel Lodging and Leisure
+Parking Management,1000,May 7 ,Other
+RWDT Foods,1000,June 24 ,Retail and Restaurants
+Surgical Specialists of St. Lucie County,1000,June 28 ,Health and Personal Care
+Foxtrot United,1000,May 12 ,Other
+RM Bakery,1000,June 15 ,Retail and Restaurants
+Maines Paper & Food Service,1000,June 10 ,Other
+John Barrett,1000,May 29 ,Health and Personal Care
+Freedom Oil & Gas,1000,May 11 ,Energy
+Gilman’s Cleaners,800,July 27 ,Other
+DUFL,500,July 22 ,Travel Lodging and Leisure
+CRT Food & Beverage,500,April 28 ,Retail and Restaurants
+Specialty’s Cafe & Bakery,500,May 27 ,Retail and Restaurants
+Northern Bear,500,June 8 ,Retail and Restaurants
+Bulls Head Diner,500,July 2 ,Retail and Restaurants
+The Pub McKinney,500,July 3 ,Retail and Restaurants
+Place Pigalle Restaurant,500,July 10 ,Retail and Restaurants
+Online King,500,July 10 ,Retail and Restaurants
+Twisted Root Burger (Coppell),500,June 8 ,Retail and Restaurants
+Woods Sealing & Striping,500,March 26 ,Industrials Materials Equipment and Parts
+Declaration Brewing,500,June 26 ,Retail and Restaurants
+Medical Associates of Mt. Vernon,500,July 10 ,Health and Personal Care
+Twisted Root Burger (Richardson),500,July 6 ,Retail and Restaurants
+KLJ Orchard Venues,500,June 18 ,Retail and Restaurants
+Sugarloaf Craft Festivals,500,June 15 ,Retail and Restaurants
+Joffe Emergency Services,500,March 12 ,Other
+Moustache Brewing,400,July 21 ,Retail and Restaurants
