@@ -1,6 +1,12 @@
 '''
 Created on Aug 2, 2020
 
+Use dash_extensions to query and display large DataFrames that come from Postgres DB queries
+
+Component flow:
+    1. select_input: dcc.Input, into which you type an sql select statement (but WITHOUT the word select)
+        e.g.: * from sec_schema.options_table limit 100000
+    2. 
 @author: bperlman1
 '''
 import sys, os
@@ -31,7 +37,7 @@ if len(args)>2:
 
 # get pga
 pga = db_info.get_db_info(config_name=config_name)
-ROWS_FOR_DASHTABLE=300
+ROWS_FOR_DASHTABLE=500
 MAIN_ID = 'tdb'
 
 # Create app.
@@ -43,15 +49,6 @@ server = app.server
 
 def _mkid(s,main_id=MAIN_ID):
     return f"{main_id}_{s}"
-
-def _make_df(value):
-    dict_df = {'rownum':list(range(1,value+1))}
-    for i in range(1,11):
-        d = np.random.rand(int(value))
-        dict_df[f'c{i}']=d
-    df = pd.DataFrame(dict_df)
-    return df
-
 
 def _make_dt(dt_id,df,displayed_rows=100,page_action='native'):
     dt = dash_table.DataTable(
@@ -74,9 +71,8 @@ num_rows_input = dcc.Input(
 )
 
 # create input box for sql select (WITHOUT THE WORD SELECT)
-select_input_store = dcc.Store(id=_mkid('select_input_store'))
 select_input = dcc.Input(
-    id=_mkid('select_input'),debounce=True,
+    id=_mkid('select_input'),#debounce=True,
     placeholder="Enter sql select statement (without the word select)",
     style = dict(width = '70%',display = 'table-cell')
 )
@@ -89,15 +85,9 @@ dt_data = _make_dt(
 
 dt_data_div = html.Div([dt_data],_mkid('dt_data_div'))
 
-app.layout = html.Div([html.Span([btn_run,num_rows_input,select_input,select_input_store]),
+app.layout = html.Div([html.Span([btn_run,num_rows_input,select_input]),
     dcc.Loading(children=[main_store,dt_data_div], fullscreen=True, type="dot")])
 
-@app.callback(
-    Output(select_input_store.id,'data'),
-    Input(select_input.id,'value')
-    )
-def _capture_sql_input(sql):
-    return sql
 
 @app.callback(
     [Output(dt_data.id,'page_size')],
@@ -109,7 +99,8 @@ def _update_page_size(value):
 
 @app.callback([ServersideOutput(main_store.id, "data")],
               Trigger(btn_run.id, "n_clicks"),
-              State(select_input_store.id,'data'))
+#               State(select_input_store.id,'data'))
+              State(select_input.id,'value'))
 def _query(sql):
     print(f"_query sql: {sql}")
     if sql is None or len(sql)<1:
