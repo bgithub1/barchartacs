@@ -29,14 +29,14 @@ import pandas as pd
 from dashapp import dashapp2 as dashapp#@UnResolvedImport
 
 args = sys.argv
-config_name=None
-if len(args)>1:
-    config_name = args[1]
+
+configs = open('./temp_folder/dashapp_db_table_config_name.txt','r').read().split(',')
+config_name=configs[0]
 
 app_port = 8812
-if len(args)>2:
-    app_port = int(args[2])
-
+if len(configs)>1:
+    app_port=int(configs[1])
+    
 # get pga
 pga = db_info.get_db_info(config_name=config_name)
 ROWS_FOR_DASHTABLE=500
