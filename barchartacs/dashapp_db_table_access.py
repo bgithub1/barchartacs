@@ -9,6 +9,7 @@ Component flow:
     2. 
 @author: bperlman1
 '''
+
 import sys, os
 import dash_core_components as dcc
 import dash_html_components as html
@@ -24,6 +25,8 @@ import datetime
 import pytz
 import re
 import db_info#@UnresolvedImport
+import pandas as pd
+from dashapp import dashapp2 as dashapp#@UnResolvedImport
 
 args = sys.argv
 config_name=None
@@ -46,6 +49,24 @@ MAIN_ID = 'tdb'
 # server = app.server
 
 DEFAULT_TIMEZONE = 'US/Eastern'
+
+
+def create_unique_values(df):
+    vals = [(c,list(df[c].unique())) for c in df.dtypes[df.dtypes=='object'].index]
+    df_unique = pd.DataFrame({vals[0][0]:vals[0][1]})
+    for v in vals[1:]:
+        df_unique = pd.concat([df_unique,pd.DataFrame({v[0]:v[1]})],axis=1)
+    return df_unique
+
+def create_aggregate_summary(df,rounding=4):
+    cols = df.columns.values
+    num_cols = [c for c in cols if (df[c].dtype=='float64') or (df[c].dtype=='int64')]
+    df_ret = df[num_cols].describe().transpose()
+    ret_cols = ['col'] + list(df_ret.columns.values)
+    df_ret['col'] = df_ret.index.values
+    df_ret = df_ret.reset_index()
+    df_ret = df_ret[ret_cols]
+    return df_ret.round(rounding)
 
 def make_text_centered_div(text):    
     col_inner_style = {
@@ -113,6 +134,216 @@ def zipdata_to_df(contents,filename):
     df = pd.read_csv(sio2)
     return df
 
+
+def progressive_dropdowns(init_values_source,
+                          dropdown_id,
+                          number_of_dropdowns,                          
+                         label_list=None,
+                         title_list=None):
+    current_parent = None
+    pd_dd_list = []
+    pd_div_list = []
+    pd_link_list = []
+#     current_value_list = value_list.copy()
+    current_value_list = []
+    for i in range(number_of_dropdowns):
+        curr_id = f"{dropdown_id}_v{i}"
+        title = None if (title_list is None) or (len(title_list) < i+1) else title_list[i]
+        pd_dd,pd_link = progressive_dropdown(current_value_list,curr_id,current_parent,
+                                            title=title,label_list=label_list)
+        current_parent = pd_dd
+        pd_link_list.append(pd_link)        
+        # wrap dropdown with title 
+        dropdown_rows = [pd_dd]
+        if (title_list is not None) and (len(title_list)>i):
+            title_div = dashapp.make_text_centered_div(title_list[i])
+            dropdown_rows = [title_div,pd_dd]
+        dropdown_div = dashapp.multi_row_panel(dropdown_rows)
+        # append new dropdown, wrapped in title, to list of dropdown htmls
+        pd_dd_list.append(pd_dd)
+        pd_div_list.append(dropdown_div)
+        
+    # create a DashLink to initialize all dropdowns in the chain
+    def _init_first_parent_dropdown(input_data):
+        dict_df = input_data[0]
+        if dict_df is None or len(dict_df)<=0:
+            dashapp.stop_callback("progressive_dropdowns._init_all_dropdowns no data")
+        df = pd.DataFrame(dict_df).iloc[:1]
+        cols = df.columns.values
+        initial_parent_options = [{'label':c,'value':c} for c in cols]
+        print('initial_parent_options')
+        print(initial_parent_options)
+        return [initial_parent_options]
+    init_cols_dashlink = dashapp.DashLink(
+        [(init_values_source.id,'data')],
+        [(pd_dd_list[0],'options')],
+        _init_first_parent_dropdown
+        )
+    all_links = [init_cols_dashlink] + pd_link_list[1:]
+    return pd_div_list,all_links,pd_dd_list
+
+def progressive_dropdown(
+    value_list,dropdown_id,parent_dropdown,label_list=None,title=None,
+    current_value=None,multi=True,className=None):
+    '''
+    '''
+#     options = [{"label": c, "value": c} for c in value_list]
+    options = [
+        {"label": value_list[i] if (label_list is None) or (len(label_list)<i+1) else label_list[i], 
+         "value": value_list[i]} for i in range(len(value_list))
+    ]
+    this_dropdown = dcc.Dropdown(
+        id=dropdown_id,
+        options = options,
+        value=current_value,
+        multi=multi,
+        className=className
+    )
+        
+    # create DashLink
+    from_parent_link = None
+    if parent_dropdown is not None:
+        # callback
+        def _choose_options(input_data):
+            parent_value = input_data[0]
+            parent_options = input_data[1]
+            if type(parent_value) != list:
+                parent_value = [parent_value]            
+            child_options = [po for po in parent_options if po['value'] not in parent_value]
+            return [child_options]
+        # make DashLink instance
+        from_parent_link = dashapp.DashLink(
+            [(parent_dropdown,'value'),(parent_dropdown,'options')],[(this_dropdown,'options')],_choose_options)
+    return this_dropdown,from_parent_link
+
+class XyGraphDefinition(html.Div):
+    def __init__(self,data_store,div_id,num_graph_filter_rows=2,
+                 logger=None):
+        titles = ['X Column','Y Left Axis','Y Right Axis']
+        prog_dd_divs,prog_dd_links,prog_dds = progressive_dropdowns(
+            data_store,f'{div_id}_dropdowns',len(titles),title_list=titles)
+        
+        # create input divs for inputing y left and right axis titles
+        y_left_axis_input = dcc.Input(value="Y MAIN",id=f"{div_id}_y_left_axis_input")
+        y_left_axis_input_title = dashapp.make_text_centered_div("Y Left Axis")
+        y_left_axis_div = dashapp.multi_row_panel([y_left_axis_input_title,y_left_axis_input])
+
+        y_right_axis_input = dcc.Input(value="Y ALT",id=f"{div_id}_y_right_axis_input")
+        y_right_axis_input_title = dashapp.make_text_centered_div("Y Right Axis")
+        y_right_axis_div = dashapp.multi_row_panel([y_right_axis_input_title,y_right_axis_input])
+
+        # create the graph button
+        graph_button = html.Button('Click for Graph',id=f'{div_id}_graph_button')
+        graph_button_title = dashapp.make_text_centered_div('Refresh Graph')
+        graph_button_div = dashapp.multi_row_panel([graph_button_title,graph_button])
+        
+        # create the graph title
+        graph_title_input = dcc.Input(value="XY Graph",id=f"{div_id}_graph_title")
+        graph_title_title = dashapp.make_text_centered_div("Graph Title")
+        graph_title_div = dashapp.multi_row_panel([graph_title_title,graph_title_input])
+        
+        
+        # create the Graph Component, with no graph in it as of yet
+        graph_id = f"{div_id}_graph"
+        graph_comp = dcc.Graph(id=graph_id)
+        
+        # build graph DashLink
+        inputs = [(graph_button,'n_clicks')]
+        outputs = [(graph_comp,'figure')]
+        states = [(dd,'value') for dd in prog_dds] + [(data_store.id,'data')] + [(y_left_axis_input,'value'),(y_right_axis_input,'value'),(graph_title_input,'value')]
+        
+        def _build_fig_callback(input_data):
+            x_col = input_data[1]
+            if type(x_col) == list:
+                x_col = x_col[0]
+            y_left_cols = input_data[2]
+            y_right_cols = input_data[3]
+            if any([x_col is None,y_left_cols is None]):
+                dashapp.stop_callback("No columns selected for graph",logger)
+                
+            if input_data[4] is None:
+                dict_df = []
+            else:
+                dict_df = list(input_data[4].values())[0]
+            df = pd.DataFrame(dict_df)
+            y_left_label = input_data[5]
+            y_right_label = input_data[6]
+            graph_title = input_data[7]
+            
+            yrc = [] if (y_right_cols is None) or (y_right_cols[0] is None) else y_right_cols
+            df = df[[x_col] + y_left_cols + yrc]
+            fig = dashapp.plotly_plot(
+                df_in=df,x_column=x_col,yaxis2_cols=y_right_cols,
+                y_left_label=y_left_label,y_right_label=y_right_label,
+                plot_title=graph_title)
+            return [fig]
+        dlink = dashapp.DashLink(inputs,outputs,_build_fig_callback,states)
+        
+        # arrange prog_dd_divs
+        filter_rows = prog_dd_divs + [y_left_axis_div,y_right_axis_div] + [graph_button_div,graph_title_div]
+        fr1 = dashapp.multi_column_panel(filter_rows[0:3])
+        fr2 = dashapp.multi_column_panel(filter_rows[3:6])
+        fr3 = dashapp.multi_column_panel(filter_rows[6:7])
+        filter_div = dashapp.multi_row_panel([fr1,fr2,fr3])
+        self.filter_rows = filter_rows
+        self.filter_div = filter_div
+        self.div_id = div_id
+        self.graph = graph_comp
+        self.dashlinks = prog_dd_links + [dlink]
+
+class ColumnSelector(dash_table.DataTable):
+    def __init__(self,dt_id,options=None,
+                 options_input_dashtable=None,
+                 displayed_rows=4,
+                 value=None,style=None):
+        
+        self.options_input_dashtable=options_input_dashtable
+        opts = options
+        if opts is None:
+            opts = []
+        df = pd.DataFrame({'option':opts})            
+        data=df.to_dict('rows')
+        columns=[{"name": i, "id": i} for i in df.columns.values]                    
+        selected_rows=list(range(len(df)))
+        
+        super(ColumnSelector,self).__init__(
+            id=dt_id,
+            editable=True,
+            page_action='none', 
+            style_table={
+                'overflowY':'auto',
+                'height': f'{30*(displayed_rows+1)+2}px'
+            } ,
+            fixed_rows={'headers': True},
+            row_selectable='multi',
+            data=data,
+            columns=columns,
+            selected_rows=selected_rows
+        )
+    def register_app(self,theapp):
+        if self.options_input_dashtable is not None:
+            @theapp.callback(
+                [
+                    Output(self.id,'data'),
+                    Output(self.id,'columns'),
+                    Output(self.id,'selected_rows')],
+                [Input(self.options_input_dashtable.id,'columns')]            
+            )
+            def _change_options(columns_dict):
+                if columns_dict is None or len(columns_dict)<=0:
+                    raise PreventUpdate("callback MultiDropdown._change_options: no DataFrame columns")
+                names = [c['name'] for c in columns_dict]
+                df_return = pd.DataFrame({'option':names})
+                data = df_return.to_dict('records')
+                columns = [{'name':c,'id':c} for c in df_return.columns.values]
+                selected_rows=df_return.index.values
+                return data,columns,selected_rows
+            return _change_options
+        else:
+            return None
+                
+            
+
 class ZipAccess(html.Div):
     def _mkid(self,s):
         return f"{self.main_id}_{s}"        
@@ -134,10 +365,6 @@ class ZipAccess(html.Div):
                     id=self._mkid("uploader_comp"),
                     children=uploader_text,
                     accept = '.zip' ,
-#                     style = {"background-color": "#e7e7e7", 
-#                              "color": "black",
-#                              "overflow-wrap": "normal",
-#                              }
                     )
         self.uploader_file_path = html.Div(id=self._mkid('uploader_file_path'))
         self.main_store = dcc.Store(id=self._mkid('main_store'))
@@ -175,10 +402,6 @@ class ZipAccess(html.Div):
                 [State(self.uploader_comp.id,'contents'),
                  State(self.uploader_comp.id,'filename')
                  ]
-#                 [ServersideOutput(self.main_store.id,'data')],
-#                 [Trigger(self.uploader_comp.id,'filename')],
-#                 [State(self.uploader_comp.id,'contents'),
-#                 State(self.uploader_comp.id,'filename')]
             )
         def _update_main_store(contents,filename):
             print(f"_update_main_store: {datetime.datetime.now()} filename: {filename}")
@@ -299,9 +522,16 @@ class DtChooser(dash_table.DataTable):
         
         :param dt_chooser_id: DataTable id
         :param store_of_df_data: dcc.Store object that holds the dict of the DataFrame that will be filtered
+        :param selected_columns_dd: a dcc.Dropdown that holds specifically selected columns by the user to show
         :param logger: instance of logging, usually obtained from init_root_logger
         '''
         self.main_store = main_store
+        
+#         self.selected_columns_dd = dcc.Dropdown(
+#             id=f'{dt_chooser_id}_selected_columns_dd',
+#             multi=True)
+        
+        
         self.num_filters_rows = num_filters_rows
         self.logger = logger
         
@@ -316,16 +546,46 @@ class DtChooser(dash_table.DataTable):
             editable=True,
         )
         
-#         self.dashlink = DashLink([(store_of_df_data.id,'data')],[(self.id,'dropdown'),(self.id,'data')],_update_column_dropdown_options)
+        self.selected_columns_dd = ColumnSelector(
+            f"{dt_chooser_id}_selected_columns_dd", 
+#             options_input_dashtable=self.id, 
+            displayed_rows=num_filters_rows)
+
+        self.full_div = html.Div(
+            [self.selected_columns_dd,self],
+            style={'display':'grid',
+                   'grid-template-columns':'20% 80%',
+                   'grid-template-rows':'1fr'}
+            )
+
+        
     def register_app(self,theapp):
         @theapp.callback(
-            [Output(self.id,'dropdown'),Output(self.id,'data')],
+            [Output(self.selected_columns_dd.id,'data'),
+             Output(self.selected_columns_dd.id,'columns'),
+             Output(self.selected_columns_dd.id,'selected_rows')],
             [Input(self.main_store.id,'data')]
-        )
-        def _update_filters(df):
+            )
+        def _get_cols(df):
             if df is None:
                 raise PreventUpdate("DtChooser._update_column_dropdown_options: no input data for columns")
-            newcols = df.columns.values
+            df_return = pd.DataFrame({'option':df.columns.values})
+            data = df_return.to_dict('records')
+            columns = [{'name':c,'id':c} for c in df_return.columns.values]
+            selected_rows = df_return.index.values
+            return data,columns,selected_rows
+        
+        @theapp.callback(
+            [Output(self.id,'dropdown'),Output(self.id,'data')],
+            [Input(self.selected_columns_dd.id,'data')],
+            [State(self.selected_columns_dd.id,'selected_rows')]
+        )
+        def _update_filters(selected_columns_df_dict,selected_rows):
+            if selected_columns_df_dict is None:
+                raise PreventUpdate("DtChooser._update_column_dropdown_options: no input data for columns")
+            df_cols = pd.DataFrame(selected_columns_df_dict).loc[selected_rows].sort_index()
+#             print(df_cols)
+            newcols = df_cols['option'].values 
             thisdd = {
                 'operation': {'options': _query_operators_options},
                 'column':{'options': [{'label': i, 'value': i} for i in newcols]}
@@ -334,7 +594,6 @@ class DtChooser(dash_table.DataTable):
             df_filter = pd.DataFrame({'column':blanks,'operation':blanks,'operator':blanks})
             return [thisdd,df_filter.to_dict('records')]
         return _update_filters
-        
 
     def execute_filter_query(self,df_source,df_query):
         '''
@@ -375,7 +634,6 @@ class CsvViewer(html.Div):
             id=self._mkid('filter_button'),
             children= "RUN FILTER",
             style=button_style
-#             style = dict(width = '10%',display = 'table-cell')
             )
         
         self.dtc = DtChooser(
@@ -392,25 +650,41 @@ class CsvViewer(html.Div):
         self.dt_data_div = html.Div([self.dt_data],self._mkid('dt_data_div'))
         
         filter_grid = html.Div(
-            [self.filter_btn,self.dtc],
+            [self.filter_btn,self.dtc.full_div],
             style={'display':'grid','grid-template-columns':'10% 90%',
                    'grid-template-rows':'1fr'}
             )
+                
+        self.unique_div = html.Div(id=self._mkid('unique_div'))
+        self.agg_div = html.Div(id=self._mkid('agg_div'))
         
+        
+        graph_title_row = dashapp.make_page_title("XY Graph",div_id=self._mkid('graph_title_row'),html_container=html.H3)
+        self.graph1_def = XyGraphDefinition(self.dt_data, self._mkid('graph1'))
+        self.graph1_div = html.Div([self.graph1_def.filter_div,graph_title_row,self.graph1_def.graph])
+        
+        t1 = dcc.Tab(children=self.dt_data_div,
+                        label='Raw Data',value='raw_data')
+        t2 = dcc.Tab(children=self.unique_div,
+                        label='Unique Data',value='unique_data')
+        t3 = dcc.Tab(children=self.agg_div,
+                        label='Aggregate Data',value='agg_data')
+        t4 = dcc.Tab(children=self.graph1_div,
+                        label='Graph1',value='graph1')
+        
+        datatable_div = dcc.Tabs(
+            children=[t1,t2,t3,t4], value='raw_data')
         children =  html.Div([
                             filter_grid,
                             dcc.Loading(
-                                children=[self.dt_data_div], 
+                                children=datatable_div, 
                                 fullscreen=True, type="dot"
-                            )
-                        ],
-#                         style={'display':'grid',
-#                                'grid-template-rows':'1fr 30fr',
-#                                'grid-template-columns':'1fr'}
-            
+                                ),
+                        ],            
                     )
            
         super(CsvViewer,self).__init__(children,id=self._mkid('csv_viewer_div'))
+        print('CsvViewer.__init__ done')
         
     def _mkid(self,s):
         return f"{self.main_id}_{s}"        
@@ -426,8 +700,6 @@ class CsvViewer(html.Div):
                 'overflowX':'scroll',
                 'height': 'auto'
             } ,
-#             virtualization=True,
-#             fixed_rows={'headers': True},
         )
         dt.data=df.to_dict('rows')
         dt.columns=[{"name": i, "id": i} for i in df.columns.values]                    
@@ -441,17 +713,31 @@ class CsvViewer(html.Div):
         def _update_page_size(value):
             print(f"_update_page_size: {value}")
             return value
-        
-        
-        @theapp.callback([Output(self.dt_data.id,'data'),
-                          Output(self.dt_data.id,'columns'),
-                       Output(self.dt_data.id,'page_count')], 
-                      [Input(self.main_store.id, "data"),
-                       Input(self.dt_data.id,'page_current'),
-                       Input(self.filter_btn.id,'n_clicks')],
-                      [State(self.dt_data.id,'page_size'),
-                       State(self.dtc.id,'data')])
-        def display_df(df, page_current,n_clicks,page_size,dtc_query_dict_df):
+                
+        @theapp.callback(
+            [
+                Output(self.dt_data.id,'data'),
+                Output(self.dt_data.id,'columns'),
+                Output(self.dt_data.id,'page_count'),
+                Output(self.unique_div.id,'children'),
+                Output(self.agg_div.id,'children')
+                ], 
+            [
+                Input(self.main_store.id, "data"),
+                Input(self.dt_data.id,'page_current'),
+                Input(self.filter_btn.id,'n_clicks')
+                ],
+            [
+                State(self.dt_data.id,'page_size'),
+                State(self.dtc.id,'data'),
+                State(self.dtc.selected_columns_dd.id,'data'),
+                State(self.dtc.selected_columns_dd.id,'selected_rows')
+                ]
+            )
+        def display_df(df, page_current,_,page_size,dtc_query_dict_df,
+                       selected_columns_dd_data,selected_columns_dd_selected_rows):
+            if df is None:
+                raise PreventUpdate('CsvViewer.display_df callback: no data')
             print(f"entering display_df: {datetime.datetime.now()} {len(df)} {page_size}")
             pagcur = int(str(page_current))
             if (pagcur is None) or (pagcur<0):
@@ -466,20 +752,33 @@ class CsvViewer(html.Div):
                 if len(df_dtc)>0:
                     df_after_filter = self.dtc.execute_filter_query(
                         df,df_dtc
-                        )                    
+                        )
+#                     if (cols_to_show is not None) and (len(cols_to_show)>0):
+#                         df_after_filter = df_after_filter[cols_to_show]                   
+                    if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
+                        cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
+                        df_after_filter = df_after_filter[cols_to_show]                   
             
             beg_row = pagcur*ps
             if pagcur*ps > len(df):
                 beg_row = len(df) - ps
         
-#             dict_data = df.iloc[beg_row:beg_row + ps].to_dict('records')
             dict_data = df_after_filter.iloc[beg_row:beg_row + ps].to_dict('records')
-            cols = [{"name": i, "id": i} for i in df.columns.values]
-#             page_count = int(len(df)/ps) + (1 if len(df) % ps > 0 else 0)
+            cols = [{"name": i, "id": i} for i in df_after_filter.columns.values]
             page_count = int(len(df_after_filter)/ps) + (1 if len(df_after_filter) % ps > 0 else 0)
-            return dict_data,cols,page_count
+            
+            # create df_unique
+            df_unique =  create_unique_values(df_after_filter)
+            dt_unique_div = html.Div([self._make_dt(self._mkid('dt_unique'),df_unique)])
+
+            df_agg = create_aggregate_summary(df_after_filter)
+            dt_agg_div = html.Div([self._make_dt(self._mkid('dt_agg'),df_agg)])
+            return dict_data,cols,page_count,dt_unique_div,dt_agg_div
         
         dtc_callback = self.dtc.register_app(theapp)
+        xygraph_dashlinks = self.graph1_def.dashlinks
+        for xygraph_dashlink in xygraph_dashlinks:
+            xygraph_dashlink.callback(theapp)
         return _update_page_size,display_df,dtc_callback
 
 
