@@ -27,6 +27,7 @@ import re
 import db_info#@UnresolvedImport
 import pandas as pd
 from dashapp import dashapp2 as dashapp#@UnResolvedImport
+import progressive_dropdown as progdd#@UnResolvedImport
 
 args = sys.argv
 
@@ -52,7 +53,9 @@ DEFAULT_TIMEZONE = 'US/Eastern'
 
 
 def create_unique_values(df):
-    vals = [(c,list(df[c].unique())) for c in df.dtypes[df.dtypes=='object'].index]
+    vals = [(c,list(df[c].unique())) for c in df.dtypes[(df.dtypes=='object') | (df.dtypes=='str')].index]
+    if len(vals)<1:
+        return pd.DataFrame()
     df_unique = pd.DataFrame({vals[0][0]:vals[0][1]})
     for v in vals[1:]:
         df_unique = pd.concat([df_unique,pd.DataFrame({v[0]:v[1]})],axis=1)
@@ -135,94 +138,17 @@ def zipdata_to_df(contents,filename):
     return df
 
 
-def progressive_dropdowns(init_values_source,
-                          dropdown_id,
-                          number_of_dropdowns,                          
-                         label_list=None,
-                         title_list=None):
-    current_parent = None
-    pd_dd_list = []
-    pd_div_list = []
-    pd_link_list = []
-#     current_value_list = value_list.copy()
-    current_value_list = []
-    for i in range(number_of_dropdowns):
-        curr_id = f"{dropdown_id}_v{i}"
-        title = None if (title_list is None) or (len(title_list) < i+1) else title_list[i]
-        pd_dd,pd_link = progressive_dropdown(current_value_list,curr_id,current_parent,
-                                            title=title,label_list=label_list)
-        current_parent = pd_dd
-        pd_link_list.append(pd_link)        
-        # wrap dropdown with title 
-        dropdown_rows = [pd_dd]
-        if (title_list is not None) and (len(title_list)>i):
-            title_div = dashapp.make_text_centered_div(title_list[i])
-            dropdown_rows = [title_div,pd_dd]
-        dropdown_div = dashapp.multi_row_panel(dropdown_rows)
-        # append new dropdown, wrapped in title, to list of dropdown htmls
-        pd_dd_list.append(pd_dd)
-        pd_div_list.append(dropdown_div)
-        
-    # create a DashLink to initialize all dropdowns in the chain
-    def _init_first_parent_dropdown(input_data):
-        dict_df = input_data[0]
-        if dict_df is None or len(dict_df)<=0:
-            dashapp.stop_callback("progressive_dropdowns._init_all_dropdowns no data")
-        df = pd.DataFrame(dict_df).iloc[:1]
-        cols = df.columns.values
-        initial_parent_options = [{'label':c,'value':c} for c in cols]
-        print('initial_parent_options')
-        print(initial_parent_options)
-        return [initial_parent_options]
-    init_cols_dashlink = dashapp.DashLink(
-        [(init_values_source.id,'data')],
-        [(pd_dd_list[0],'options')],
-        _init_first_parent_dropdown
-        )
-    all_links = [init_cols_dashlink] + pd_link_list[1:]
-    return pd_div_list,all_links,pd_dd_list
-
-def progressive_dropdown(
-    value_list,dropdown_id,parent_dropdown,label_list=None,title=None,
-    current_value=None,multi=True,className=None):
-    '''
-    '''
-#     options = [{"label": c, "value": c} for c in value_list]
-    options = [
-        {"label": value_list[i] if (label_list is None) or (len(label_list)<i+1) else label_list[i], 
-         "value": value_list[i]} for i in range(len(value_list))
-    ]
-    this_dropdown = dcc.Dropdown(
-        id=dropdown_id,
-        options = options,
-        value=current_value,
-        multi=multi,
-        className=className
-    )
-        
-    # create DashLink
-    from_parent_link = None
-    if parent_dropdown is not None:
-        # callback
-        def _choose_options(input_data):
-            parent_value = input_data[0]
-            parent_options = input_data[1]
-            if type(parent_value) != list:
-                parent_value = [parent_value]            
-            child_options = [po for po in parent_options if po['value'] not in parent_value]
-            return [child_options]
-        # make DashLink instance
-        from_parent_link = dashapp.DashLink(
-            [(parent_dropdown,'value'),(parent_dropdown,'options')],[(this_dropdown,'options')],_choose_options)
-    return this_dropdown,from_parent_link
 
 class XyGraphDefinition(html.Div):
     def __init__(self,data_store,div_id,num_graph_filter_rows=2,
                  logger=None):
         titles = ['X Column','Y Left Axis','Y Right Axis']
-        prog_dd_divs,prog_dd_links,prog_dds = progressive_dropdowns(
-            data_store,f'{div_id}_dropdowns',len(titles),title_list=titles)
-        
+#         prog_dd_divs,prog_dd_links,prog_dds = progressive_dropdowns(
+#             data_store,f'{div_id}_dropdowns',len(titles),title_list=titles)
+        self.prog_dd = progdd.ProgressiveDropdown(
+            data_store,f'{div_id}_dropdowns',
+            len(titles),title_list=titles
+            )
         # create input divs for inputing y left and right axis titles
         y_left_axis_input = dcc.Input(value="Y MAIN",id=f"{div_id}_y_left_axis_input")
         y_left_axis_input_title = dashapp.make_text_centered_div("Y Left Axis")
@@ -233,9 +159,9 @@ class XyGraphDefinition(html.Div):
         y_right_axis_div = dashapp.multi_row_panel([y_right_axis_input_title,y_right_axis_input])
 
         # create the graph button
-        graph_button = html.Button('Click for Graph',id=f'{div_id}_graph_button')
+        self.graph_button = html.Button('Click for Graph',id=f'{div_id}_graph_button')
         graph_button_title = dashapp.make_text_centered_div('Refresh Graph')
-        graph_button_div = dashapp.multi_row_panel([graph_button_title,graph_button])
+        self.graph_button_div = dashapp.multi_row_panel([graph_button_title,self.graph_button])
         
         # create the graph title
         graph_title_input = dcc.Input(value="XY Graph",id=f"{div_id}_graph_title")
@@ -244,31 +170,65 @@ class XyGraphDefinition(html.Div):
         
         
         # create the Graph Component, with no graph in it as of yet
-        graph_id = f"{div_id}_graph"
-        graph_comp = dcc.Graph(id=graph_id)
+        self.graph_comp = dcc.Graph(id=f"{div_id}_graph")
         
         # build graph DashLink
-        inputs = [(graph_button,'n_clicks')]
-        outputs = [(graph_comp,'figure')]
-        states = [(dd,'value') for dd in prog_dds] + [(data_store.id,'data')] + [(y_left_axis_input,'value'),(y_right_axis_input,'value'),(graph_title_input,'value')]
+        dd_states = [State(dd.id,'value') for dd in self.prog_dd.pd_dd_list]
+        store_state = [State(data_store.id,'data')]
+        axis_states = [
+            State(y_left_axis_input.id,'value'),
+            State(y_right_axis_input.id,'value'),
+            State(graph_title_input.id,'value')
+            ]
+        self.states =  dd_states  + store_state + axis_states
         
-        def _build_fig_callback(input_data):
-            x_col = input_data[1]
+#         filter_rows = prog_dd_divs + [y_left_axis_div,y_right_axis_div] + [graph_button_div,graph_title_div]
+        filter_rows = self.prog_dd.pd_div_list + [y_left_axis_div,y_right_axis_div] + [self.graph_button_div,graph_title_div]
+        fr1 = dashapp.multi_column_panel(filter_rows[0:3])
+        fr2 = dashapp.multi_column_panel(filter_rows[3:6])
+        fr3 = dashapp.multi_column_panel(filter_rows[6:7])
+        filter_div =dashapp.multi_row_panel([fr1,fr2,fr3])
+#         self.filter_rows = filter_rows
+#         self.filter_div = filter_div
+#         self.div_id = div_id
+#         self.graph = self.graph_comp
+        super(XyGraphDefinition,self).__init__(
+            [filter_div,self.graph_comp],id=div_id
+            )
+        
+        
+    def register_app(self,theapp):
+        @theapp.callback(
+            Output(self.graph_comp.id,'figure'),
+            Input(self.graph_button.id,'n_clicks'),
+            self.states
+            )
+        def _build_fig_callback(
+                _,
+                x_col,
+                y_left_cols,
+                y_right_cols,
+                dict_df,
+                y_left_label,
+                y_right_label,
+                graph_title
+                ):
+#             x_col = input_data[1]
             if type(x_col) == list:
                 x_col = x_col[0]
-            y_left_cols = input_data[2]
-            y_right_cols = input_data[3]
+#             y_left_cols = input_data[2]
+#             y_right_cols = input_data[3]
             if any([x_col is None,y_left_cols is None]):
-                dashapp.stop_callback("No columns selected for graph",logger)
+                raise PreventUpdate("No columns selected for graph")
                 
-            if input_data[4] is None:
-                dict_df = []
-            else:
-                dict_df = list(input_data[4].values())[0]
+#             if input_data[4] is None:
+#                 dict_df = []
+#             else:
+#                 dict_df = list(input_data[4].values())[0]
             df = pd.DataFrame(dict_df)
-            y_left_label = input_data[5]
-            y_right_label = input_data[6]
-            graph_title = input_data[7]
+#             y_left_label = input_data[5]
+#             y_right_label = input_data[6]
+#             graph_title = input_data[7]
             
             yrc = [] if (y_right_cols is None) or (y_right_cols[0] is None) else y_right_cols
             df = df[[x_col] + y_left_cols + yrc]
@@ -276,20 +236,9 @@ class XyGraphDefinition(html.Div):
                 df_in=df,x_column=x_col,yaxis2_cols=y_right_cols,
                 y_left_label=y_left_label,y_right_label=y_right_label,
                 plot_title=graph_title)
-            return [fig]
-        dlink = dashapp.DashLink(inputs,outputs,_build_fig_callback,states)
-        
-        # arrange prog_dd_divs
-        filter_rows = prog_dd_divs + [y_left_axis_div,y_right_axis_div] + [graph_button_div,graph_title_div]
-        fr1 = dashapp.multi_column_panel(filter_rows[0:3])
-        fr2 = dashapp.multi_column_panel(filter_rows[3:6])
-        fr3 = dashapp.multi_column_panel(filter_rows[6:7])
-        filter_div = dashapp.multi_row_panel([fr1,fr2,fr3])
-        self.filter_rows = filter_rows
-        self.filter_div = filter_div
-        self.div_id = div_id
-        self.graph = graph_comp
-        self.dashlinks = prog_dd_links + [dlink]
+            return fig
+        self.prog_dd.register_app(theapp)
+#         dlink = dashapp.DashLink(inputs,outputs,_build_fig_callback,states)
 
 class ColumnSelector(dash_table.DataTable):
     def __init__(self,dt_id,options=None,
@@ -660,8 +609,8 @@ class CsvViewer(html.Div):
         
         
         graph_title_row = dashapp.make_page_title("XY Graph",div_id=self._mkid('graph_title_row'),html_container=html.H3)
-        self.graph1_def = XyGraphDefinition(self.dt_data, self._mkid('graph1'))
-        self.graph1_div = html.Div([self.graph1_def.filter_div,graph_title_row,self.graph1_def.graph])
+        self.graph1_div = XyGraphDefinition(self.dt_data, self._mkid('graph1'))
+#         self.graph1_div = html.Div([self.graph1_def.filter_div,graph_title_row,self.graph1_def.graph])
         
         t1 = dcc.Tab(children=self.dt_data_div,
                         label='Raw Data',value='raw_data')
@@ -776,9 +725,10 @@ class CsvViewer(html.Div):
             return dict_data,cols,page_count,dt_unique_div,dt_agg_div
         
         dtc_callback = self.dtc.register_app(theapp)
-        xygraph_dashlinks = self.graph1_def.dashlinks
-        for xygraph_dashlink in xygraph_dashlinks:
-            xygraph_dashlink.callback(theapp)
-        return _update_page_size,display_df,dtc_callback
+        self.graph1_div.register_app(theapp)
+#         xygraph_dashlinks = self.graph1_def.dashlinks
+#         for xygraph_dashlink in xygraph_dashlinks:
+#             xygraph_dashlink.callback(theapp)
+#         return _update_page_size,display_df,dtc_callback
 
 
