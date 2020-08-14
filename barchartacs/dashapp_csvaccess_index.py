@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath('../'))
 from dashapp_db_table_access import dcc,html,Output,Input#@UnResolvedImport
 from dashapp_csvaccess_app import app,app_port,url_base_pathname#@UnResolvedImport
 from dashapp_csvaccess_zipaccess_app import app_layout as ziplayout#@UnResolvedImport
+from dashapp_csvaccess_csvaccess_app import app_layout as csvlayout#@UnResolvedImport
 from dashapp_csvaccess_sqlaccess_app import app_layout as sqllayout#@UnResolvedImport
 
 # Create app.
@@ -17,12 +18,13 @@ from dashapp_csvaccess_sqlaccess_app import app_layout as sqllayout#@UnResolvedI
 loc_comp = dcc.Location(id='csvaccess_url', refresh=False)
 page_comp = html.Div(['initial content'],id='page-content')
 ziplink = dcc.Link('zip', href=f'{url_base_pathname}/zip')
+csvlink = dcc.Link('csv', href=f'{url_base_pathname}/csv')
 sqllink = dcc.Link('sql', href=f'{url_base_pathname}/sql')
 padd = 1
 link_choices_div = html.Div(
-    [ziplink,sqllink],
+    [ziplink,csvlink,sqllink],
     style={
-           'display':'grid','grid-template-columns':'1fr 1fr ',
+           'display':'grid','grid-template-columns':'1fr 1fr 1fr ',
            'grid-template-rows':'1fr'
            })
 app.layout = html.Div(
@@ -36,10 +38,11 @@ app.layout = html.Div(
 def display_page(pathname):
     print(f"display_page pathname: {pathname}")
     if pathname == f'{url_base_pathname}/zip':
-        
         return ziplayout
     elif pathname == f'{url_base_pathname}/sql':
         return sqllayout
+    elif pathname == f'{url_base_pathname}/csv':
+        return csvlayout
     else:
         return html.Div([html.Br(),'****** Choose a Data Source from the Links Above **********'])
 

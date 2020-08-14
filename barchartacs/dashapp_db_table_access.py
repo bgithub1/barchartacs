@@ -297,11 +297,12 @@ class ZipAccess(html.Div):
     def _mkid(self,s):
         return f"{self.main_id}_{s}"        
     
-    def __init__(self,app,main_id):
+    def __init__(self,app,main_id,zip_or_csv='zip'):
         self.main_id = main_id
         self.app = app
+        self.zip_or_csv = zip_or_csv
         self.btn_run = html.Button(
-            children="Upload Zip or CSV",id=self._mkid('btn_run'),
+            children=f"Upload {zip_or_csv.upper()}",id=self._mkid('btn_run'),
             )
         self.num_rows_input = dcc.Input(
             id=self._mkid('num_rows_input'),debounce=True,
@@ -309,11 +310,11 @@ class ZipAccess(html.Div):
             min=100, max=ROWS_FOR_DASHTABLE*2, step=100,
             )
         # create uploader
-        uploader_text = make_text_centered_div("Choose a Zipped CSV File")
+        uploader_text = make_text_centered_div(f"Choose a {zip_or_csv.upper()} File")
         self.uploader_comp = dcc.Upload(
                     id=self._mkid("uploader_comp"),
                     children=uploader_text,
-                    accept = '.zip' ,
+                    accept = f'.{zip_or_csv.lower()},.{zip_or_csv.upper()}' ,
                     )
         self.uploader_file_path = html.Div(id=self._mkid('uploader_file_path'))
         self.main_store = dcc.Store(id=self._mkid('main_store'))
@@ -363,7 +364,7 @@ class ZipAccess(html.Div):
                 df = zipdata_to_df(contents, filename)
             else:
                 table_data_dict = transformer_csv_from_upload_component(contents)
-                df = pd.DataFrame(table_data_dict).head(1)
+                df = pd.DataFrame(table_data_dict)
             print(f"_update_main_store")
             return df
             
@@ -436,8 +437,9 @@ def filter_df(df,col,operator,predicate):
     o = operator
     if (o is None) or (len(o.strip())<=0):
         o = 'contains'
-    if o == 'contains':
         df = df[df[col].astype(str).str.contains(p)]
+    elif o == 'not':
+        df = df[~df[col].astype(str).str.contains(p)]
     else:
         needs_quotes = False
         try:
@@ -459,6 +461,7 @@ _query_operators_options = [
     {'label':'>=','value':'>='},
     {'label':'<=','value':'<='},
     {'label':'btwn','value':'btwn'},
+    {'label':'not','value':'not'},
 ]
 class DtChooser(dash_table.DataTable):
     '''
@@ -644,6 +647,9 @@ class CsvViewer(html.Div):
             page_current= 0,
             page_size=displayed_rows,
             page_action=page_action, 
+            sort_action='custom',
+            sort_mode='multi',
+            sort_by=[],
             style_table={
                 'overflowY':'scroll',
                 'overflowX':'scroll',
@@ -674,7 +680,8 @@ class CsvViewer(html.Div):
             [
                 Input(self.main_store.id, "data"),
                 Input(self.dt_data.id,'page_current'),
-                Input(self.filter_btn.id,'n_clicks')
+                Input(self.filter_btn.id,'n_clicks'),
+                Input(self.dt_data.id,'sort_by')
                 ],
             [
                 State(self.dt_data.id,'page_size'),
@@ -683,7 +690,7 @@ class CsvViewer(html.Div):
                 State(self.dtc.selected_columns_dd.id,'selected_rows')
                 ]
             )
-        def display_df(df, page_current,_,page_size,dtc_query_dict_df,
+        def display_df(df, page_current,_,sort_by,page_size,dtc_query_dict_df,
                        selected_columns_dd_data,selected_columns_dd_selected_rows):
             if df is None:
                 raise PreventUpdate('CsvViewer.display_df callback: no data')
@@ -707,6 +714,16 @@ class CsvViewer(html.Div):
                     if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
                         cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
                         df_after_filter = df_after_filter[cols_to_show]                   
+            
+            if len(sort_by):
+                df_after_filter = df_after_filter.sort_values(
+                    [col['column_id'] for col in sort_by],
+                    ascending=[
+                        col['direction'] == 'asc'
+                        for col in sort_by
+                    ],
+                    inplace=False
+                )
             
             beg_row = pagcur*ps
             if pagcur*ps > len(df):
