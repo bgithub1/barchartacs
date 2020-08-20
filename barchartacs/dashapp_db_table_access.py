@@ -25,10 +25,9 @@ import datetime
 import pytz
 import re
 import db_info#@UnresolvedImport
-import pandas as pd
 from dashapp import dashapp2 as dashapp#@UnResolvedImport
 import progressive_dropdown as progdd#@UnResolvedImport
-
+import logging
 args = sys.argv
 
 configs = open('./temp_folder/dashapp_db_table_config_name.txt','r').read().split(',')
@@ -43,23 +42,73 @@ pga = db_info.get_db_info(config_name=config_name)
 ROWS_FOR_DASHTABLE=500
 MAIN_ID = 'tdb'
 
-# Create app.
-# url_base_pathname=f'/app{app_port}/'
-# app = Dash(prevent_initial_callbacks=True,url_base_pathname=url_base_pathname)
-# app.title='db_table_access'
-# server = app.server
+DEFAULT_LOG_PATH = './logfile.log'
+DEFAULT_LOG_LEVEL = 'INFO'
+
+def init_root_logger(logfile=DEFAULT_LOG_PATH,logging_level=None):
+    level = logging_level
+    if level is None:
+        level = logging.INFO
+    # get root level logger
+    logger = logging.getLogger()
+    if len(logger.handlers)>0:
+        return logger
+    logger.setLevel(logging.getLevelName(level))
+
+    fh = logging.FileHandler(logfile)
+    fh.setLevel(logging.DEBUG)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)   
+    return logger
+
 
 DEFAULT_TIMEZONE = 'US/Eastern'
 
 
+# def create_unique_values(df):
+#     # create a list of tuples, where each tuple has a column name and a list of unique values
+#     vals = [(c,list(df[c].unique())) for c in df.dtypes[(df.dtypes=='object') | (df.dtypes=='str')].index]
+#     # if there are no tuples in the list, return an empty DataFrame
+#     if len(vals)<1:
+#         return pd.DataFrame()
+#     # create a one row DataFrame with the first column, and the unique values for that column
+#     df_unique = pd.DataFrame({vals[0][0]:vals[0][1]})
+# 
+#     # Loop through the remaining columns, using pd. concat to add new columns
+#     #   to df_unique, which will automatically broadcast each column so that 
+#     #   all columns have the same length
+#     for v in vals[1:]:
+#         df_unique = pd.concat([df_unique,pd.DataFrame({v[0]:v[1]})],axis=1)
+#     return df_unique
+
+
 def create_unique_values(df):
+    # create a list of tuples, where each tuple has a column name and a list of unique values
     vals = [(c,list(df[c].unique())) for c in df.dtypes[(df.dtypes=='object') | (df.dtypes=='str')].index]
+    # if there are no tuples in the list, return an empty DataFrame
     if len(vals)<1:
         return pd.DataFrame()
+    # create a one row DataFrame with the first column, and the unique values for that column
     df_unique = pd.DataFrame({vals[0][0]:vals[0][1]})
+
+    # Loop through the remaining columns, using pd. concat to add new columns
+    #   to df_unique, which will automatically broadcast each column so that 
+    #   all columns have the same length
     for v in vals[1:]:
         df_unique = pd.concat([df_unique,pd.DataFrame({v[0]:v[1]})],axis=1)
+    df_unique = df_unique.fillna('')
+    df_unique = df_unique[df_unique.apply(lambda r:len(''.join(r))>0,axis=1)]
+    df_unique.index = list(range(len(df_unique)))
     return df_unique
+
 
 def create_aggregate_summary(df,rounding=4):
     cols = df.columns.values
@@ -126,7 +175,6 @@ def transformer_csv_from_upload_component(contents):
 def zipdata_to_df(contents,filename):
     c = contents.split(",")[1]
     content_decoded = base64.b64decode(c)
-#         content_decoded = base64.b64decode(contents)
     # Use BytesIO to handle the decoded content
     zoio2 = io.BytesIO(content_decoded)
     f = zipfile.ZipFile(zoio2).open(filename.replace('.zip',''))
@@ -137,14 +185,31 @@ def zipdata_to_df(contents,filename):
     df = pd.read_csv(sio2)
     return df
 
+def _make_dt(dt_id,df,displayed_rows=100,page_action='native'):
+    dt = dash_table.DataTable(
+        id=dt_id,
+        page_current= 0,
+        page_size=displayed_rows,
+        page_action=page_action, 
+        sort_action='custom',
+        sort_mode='multi',
+        sort_by=[],
+        style_table={
+            'overflowY':'scroll',
+            'overflowX':'scroll',
+            'height': 'auto'
+        } ,
+    )
+    dt.data=df.to_dict('rows')
+    dt.columns=[{"name": i, "id": i} for i in df.columns.values]                    
+    return dt
+
 
 
 class XyGraphDefinition(html.Div):
     def __init__(self,data_store,div_id,num_graph_filter_rows=2,
                  logger=None):
         titles = ['X Column','Y Left Axis','Y Right Axis']
-#         prog_dd_divs,prog_dd_links,prog_dds = progressive_dropdowns(
-#             data_store,f'{div_id}_dropdowns',len(titles),title_list=titles)
         self.prog_dd = progdd.ProgressiveDropdown(
             data_store,f'{div_id}_dropdowns',
             len(titles),title_list=titles
@@ -182,16 +247,11 @@ class XyGraphDefinition(html.Div):
             ]
         self.states =  dd_states  + store_state + axis_states
         
-#         filter_rows = prog_dd_divs + [y_left_axis_div,y_right_axis_div] + [graph_button_div,graph_title_div]
         filter_rows = self.prog_dd.pd_div_list + [y_left_axis_div,y_right_axis_div] + [self.graph_button_div,graph_title_div]
         fr1 = dashapp.multi_column_panel(filter_rows[0:3])
         fr2 = dashapp.multi_column_panel(filter_rows[3:6])
         fr3 = dashapp.multi_column_panel(filter_rows[6:7])
         filter_div =dashapp.multi_row_panel([fr1,fr2,fr3])
-#         self.filter_rows = filter_rows
-#         self.filter_div = filter_div
-#         self.div_id = div_id
-#         self.graph = self.graph_comp
         super(XyGraphDefinition,self).__init__(
             [filter_div,self.graph_comp],id=div_id
             )
@@ -213,22 +273,12 @@ class XyGraphDefinition(html.Div):
                 y_right_label,
                 graph_title
                 ):
-#             x_col = input_data[1]
             if type(x_col) == list:
                 x_col = x_col[0]
-#             y_left_cols = input_data[2]
-#             y_right_cols = input_data[3]
             if any([x_col is None,y_left_cols is None]):
                 raise PreventUpdate("No columns selected for graph")
                 
-#             if input_data[4] is None:
-#                 dict_df = []
-#             else:
-#                 dict_df = list(input_data[4].values())[0]
             df = pd.DataFrame(dict_df)
-#             y_left_label = input_data[5]
-#             y_right_label = input_data[6]
-#             graph_title = input_data[7]
             
             yrc = [] if (y_right_cols is None) or (y_right_cols[0] is None) else y_right_cols
             df = df[[x_col] + y_left_cols + yrc]
@@ -238,7 +288,6 @@ class XyGraphDefinition(html.Div):
                 plot_title=graph_title)
             return fig
         self.prog_dd.register_app(theapp)
-#         dlink = dashapp.DashLink(inputs,outputs,_build_fig_callback,states)
 
 class ColumnSelector(dash_table.DataTable):
     def __init__(self,dt_id,options=None,
@@ -318,6 +367,7 @@ class ZipAccess(html.Div):
                     )
         self.uploader_file_path = html.Div(id=self._mkid('uploader_file_path'))
         self.main_store = dcc.Store(id=self._mkid('main_store'))
+        
         children =[
                 html.Div([
                         self.btn_run,
@@ -451,6 +501,26 @@ def filter_df(df,col,operator,predicate):
         df = df.query(q)
     return df
 
+def execute_filter_query(df_source,df_query):
+    '''
+    Filter df_source - IN PLACE - using df_query.
+    df_query has 3 columns: column, operation, operator
+    :param df_source: orignal DataFrame to be queried
+    :param df_query: a DataFrame of queries
+    '''
+    print('execute_filter_query')
+    print(df_query)
+    for i in range(len(df_query)):
+        s = df_query.iloc[i]
+        predicate = s.operator
+        if (predicate is None) or (len(predicate.strip())<=0):
+            continue
+        c = s['column']
+        o = s.operation
+        df_temp = filter_df(df_source,c,o,predicate)
+        if df_temp is not None:
+            df_source = df_temp.copy()
+    return df_source
 
 _query_operators_options = [
     {'label':'','value':''},
@@ -463,26 +533,30 @@ _query_operators_options = [
     {'label':'btwn','value':'btwn'},
     {'label':'not','value':'not'},
 ]
+
+
 class DtChooser(dash_table.DataTable):
     '''
     Create a Dash DataTable that displays filter options for the columns 
       of another DataFrame's data, that is located in a dcc.Store
     '''
     def __init__(self,dt_chooser_id,
-                 main_store,num_filters_rows=4,logger=None):
+                 main_store,
+                 initial_columns_store=None,
+                 initial_columns_store_colname='colname',
+                 num_filters_rows=4,logger=None):
         '''
         
         :param dt_chooser_id: DataTable id
         :param store_of_df_data: dcc.Store object that holds the dict of the DataFrame that will be filtered
-        :param selected_columns_dd: a dcc.Dropdown that holds specifically selected columns by the user to show
         :param logger: instance of logging, usually obtained from init_root_logger
         '''
         self.main_store = main_store
-        
-#         self.selected_columns_dd = dcc.Dropdown(
-#             id=f'{dt_chooser_id}_selected_columns_dd',
-#             multi=True)
-        
+        self.initial_column_store = initial_columns_store
+        self.initial_columns_store_colname = initial_columns_store_colname
+        if self.initial_column_store is None:
+            self.initial_column_store = dcc.Store(id=f"{dt_chooser_id}_initial_column_store",
+                                                  data={})
         
         self.num_filters_rows = num_filters_rows
         self.logger = logger
@@ -500,7 +574,6 @@ class DtChooser(dash_table.DataTable):
         
         self.selected_columns_dd = ColumnSelector(
             f"{dt_chooser_id}_selected_columns_dd", 
-#             options_input_dashtable=self.id, 
             displayed_rows=num_filters_rows)
 
         self.full_div = html.Div(
@@ -516,11 +589,18 @@ class DtChooser(dash_table.DataTable):
             [Output(self.selected_columns_dd.id,'data'),
              Output(self.selected_columns_dd.id,'columns'),
              Output(self.selected_columns_dd.id,'selected_rows')],
-            [Input(self.main_store.id,'data')]
+            [Input(self.main_store.id,'data')],
+            State(self.initial_column_store.id,'data')
             )
-        def _get_cols(df):
+        def _get_cols(df,dict_initial_column_store):
             if df is None:
                 raise PreventUpdate("DtChooser._update_column_dropdown_options: no input data for columns")
+            if type(df)!=pd.DataFrame:
+                df = pd.DataFrame(df)
+            df_initial_column_store = pd.DataFrame(dict_initial_column_store)
+            if len(df_initial_column_store)>0:
+                initial_columns = df_initial_column_store[self.initial_columns_store_colname].values
+                df = df[initial_columns]
             df_return = pd.DataFrame({'option':df.columns.values})
             data = df_return.to_dict('records')
             columns = [{'name':c,'id':c} for c in df_return.columns.values]
@@ -547,40 +627,485 @@ class DtChooser(dash_table.DataTable):
             return [thisdd,df_filter.to_dict('records')]
         return _update_filters
 
-    def execute_filter_query(self,df_source,df_query):
+
+class DdFilterDiv(html.Div):
+    def __init__(self,dd_filter_div_id,
+                 columns_to_filter=None, 
+                 default_column_to_filter_value=None):
+        column_dd_options = []
+        if columns_to_filter is not None:
+            column_dd_options = [{'label':c,'value':c} for c in columns_to_filter]
+        column_dd  = dcc.Dropdown(
+            id=f'{dd_filter_div_id}_column_dd',
+            options=column_dd_options,
+            value=default_column_to_filter_value
+            )
+        operation_dd = dcc.Dropdown(
+            id=f'{dd_filter_div_id}_operation_dd',
+            options=_query_operators_options)
+        operator = dcc.Input(id=f'{dd_filter_div_id}_inp',debounce=True)
+        super(DdFilterDiv,self).__init__(
+            [column_dd,operation_dd,operator],
+            style={
+                'display':'grid','grid-template-rows':'1fr 1fr 1fr',
+                'grid-template-columns':'1fr'
+                }
+            )
+        self.column_dd = column_dd
+        self.operation_dd = operation_dd
+        self.operator = operator
+        
+
+class DdChooser(html.Div):
+    '''
+    Create a html.Div containing a series of sub divs that allow the
+      user to choose columns of a DataFrame using dropdown filters
+    '''
+    def __init__(self,dd_chooser_id,
+                 main_store,num_filters=4,
+                 columns_to_filter=None, 
+                 default_column_to_filter_value=None,
+                 logger=None):
         '''
-        Filter df_source - IN PLACE - using df_query.
-        df_query has 3 columns: column, operation, operator
-        :param df_source: orignal DataFrame to be queried
-        :param df_query: a DataFrame of queries
+        
+        :param dd_chooser_id: id of main div, and the prefix used for sub-divs and components
+        :param store_of_df_data: dcc.Store object that holds the dict of the DataFrame that will be filtered
+        :param number of filters to display
+        :param logger: instance of logging, usually obtained from init_root_logger
         '''
-        for i in range(len(df_query)):
-            s = df_query.iloc[i]
-            predicate = s.operator
-            if (predicate is None) or (len(predicate.strip())<=0):
+        self.logger= logger
+        self.main_store = main_store
+        self.query_store = dcc.Store(id=f'{dd_chooser_id}_query_store')
+        self.num_filters = num_filters
+        self.columns_to_filter = columns_to_filter
+        self.default_column_to_filter_value = default_column_to_filter_value
+        self.dd_filters = []
+        for i in range(num_filters):
+            dfd = DdFilterDiv(f'{dd_chooser_id}_dd_filter_{i}',
+                              columns_to_filter=columns_to_filter,
+                              default_column_to_filter_value=default_column_to_filter_value
+                              )
+            self.dd_filters.append(dfd)
+        
+        self.logger = logger
+        
+        self.dd_filter_outputs = [Output(dd_filter.column_dd.id,'options') for dd_filter in self.dd_filters]
+        
+        super(DdChooser,self).__init__(
+            self.dd_filters+[self.query_store],
+            id=dd_chooser_id,
+            style={'display':'grid',
+                   'grid-template-columns':' '.join(['1fr' for _ in range(num_filters)]),
+                   'grid-template-rows':'1fr'}
+        )
+        
+    def register_app(self,theapp):
+        if self.columns_to_filter is None:
+            @theapp.callback(
+                self.dd_filter_outputs,
+                [Input(self.main_store.id,'data')]
+                )
+            def _get_cols(df):
+                '''
+                Return a list of options arrays that will populate the column dropdown of each
+                DdFilterDiv in  self.dd_filters
+                :param df: Source of data with columns to be filtered
+                '''
+                if df is None:
+                    raise PreventUpdate("DtChooser._update_column_dropdown_options: no input data for columns")
+                if type(df)!=pd.DataFrame:
+                    df = pd.DataFrame(df)
+                options = [{'label':c,'value':c} for c in df.columns.values]
+                print('DdChooser._get_cols')
+                print(options)
+                return [options for _ in range(len(self.dd_filters))]
+        
+        @theapp.callback(
+            Output(self.query_store.id,'data'),
+            [Input(dd_filter.operator.id,'value') for dd_filter in self.dd_filters],
+            [State(dd_filter.column_dd.id,'value') for dd_filter in self.dd_filters]+
+            [State(dd_filter.operation_dd.id,'value') for dd_filter in self.dd_filters]
+            )
+        def _populate_query_store(*arg):
+            query_operators = []
+            query_columns = []
+            query_operations = []
+            for i in range(self.num_filters):
+                query_operators.append(arg[i])
+                query_columns.append(arg[i+self.num_filters])
+                query_operations.append(arg[i+2*self.num_filters])
+            if all([o is None for o in query_operators]):
+                msg = 'DdChooser._populate_query_store: no data'
+                print(msg)
+                raise PreventUpdate(msg)
+            df_query = pd.DataFrame({'column':query_columns,'operation':query_operations,'operator':query_operators})
+            print('DdChoose._populate_query_store')
+            print(df_query)
+            return df_query.to_dict('records')
+        
+class ColumnInfo(html.Div):
+    def _mkid(self,s):
+        return f"{self.main_id}_{s}"        
+    
+    def _do_eval(self,code,cols):
+        '''
+        Evaluate the lines in the argument code against every column in cols.
+        The argument code is a multi-line string delimited with '\n' characters.
+        :param code:
+        :param cols:
+        '''
+        arr = []
+        for col in cols:
+            val = None
+            try:
+                for expr in code.split('\n'):
+                    if len(expr)>0:
+                        val = eval(expr)
+            except:
                 continue
-            c = s['column']
-            o = s.operation
-            df_temp = filter_df(df_source,c,o,predicate)
-            if df_temp is not None:
-                df_source = df_temp.copy()
-        return df_source
+            arr.append(val)
+        return arr
+    
+    def _eval_df(self,dd,cols):
+        ddd = {k:self._do_eval(dd[k],cols) for k in dd.keys()}
+        df = pd.DataFrame(ddd)
+        return df
 
+    def __init__(self,app,main_id,
+            column_data_comp,column_key='colname',num_rows_input=4,
+            logger=None,button_style=None
+            ):
+        '''
+        
+        :param app:
+        :param main_id:
+        :param column_data_comp: A component that holds the main data, whose columns 
+                                  will be analyzed by ColumnInfo
+        :param column_key: The name of the column for the DataFrame that holds all of the column titles
+        :param num_rows_input: The number of "info" columns that the user wants to extract from each
+                                 column of the original data in column_data_comp
+        :param logger:
+        :param button_style:
+        '''
+        # build pairs of dcc.Input components to define the output columns of ColumnInfo DataFrame
+        self.main_id = main_id
+        self.app = app
+        self.num_rows_input = num_rows_input
+        self.logger = logger
+        if self.logger is None:
+            self.logger = init_root_logger()
+        self.column_data_comp = column_data_comp
+        self.column_key = column_key
+        self.column_info_dt = _make_dt(
+            self._mkid('column_info_dt'), pd.DataFrame())
+        
+        class _InputPair(html.Div):
+            def __init__(self,i,outer_class):
+                self.inp_col_name = dcc.Input(id=outer_class._mkid(f'input_pair_col_name_{i}'),debounce=True)
+                self.inp_expr = dcc.Textarea(id=outer_class._mkid(f'input_pair_expr_{i}'))
+                super(_InputPair,self).__init__(
+                    [self.inp_col_name,self.inp_expr],
+                    style={
+                        'display':'grid',
+                        'grid-template-rows':'1fr 4fr',
+                        'grid-template-columns':'1fr'
+                        }
+                    )
+        self.col_info_btn = html.Button(
+            id=self._mkid('col_info_btn'),
+            children= "CREATE COL INFO",
+            style=button_style
+            )
+        
+        input_pairs = [_InputPair(i,self) for i in range(num_rows_input)]
+        input_pairs_row_div = html.Div(input_pairs,
+            style = {
+                    'display':'grid',
+                    'grid-template-columns': ' '.join(['1fr' for _ in range(num_rows_input)]),
+                    'grid-template-rows':'1fr'
+                }
+                                       )
+        input_pairs_div = html.Div(
+            [self.col_info_btn,input_pairs_row_div],
+            style = {
+                    'display':'grid',
+                    'grid-template-columns': '10% 90%',
+                    'grid-template-rows':'1fr'
+                }
+            )
 
+        children = [input_pairs_div,self.column_info_dt]
+        # call the super constructor
+        super(ColumnInfo,self).__init__(children,id=self._mkid('column_info_div'))
+        
+        col_name_inputs = [State(ip.inp_col_name.id,'value') for ip in input_pairs]
+        col_inp_exp_inputs = [State(ip.inp_expr.id,'value') for ip in input_pairs]
+        
+        self.col_states =  col_name_inputs + col_inp_exp_inputs 
+
+    def register_app(self,theapp):
+        @theapp.callback(
+            [
+                Output(self.column_info_dt.id,'data'),
+                Output(self.column_info_dt.id,'columns'),
+                ],
+            [
+                Input(self.col_info_btn.id,'n_clicks'),
+                Input(self.column_data_comp.id,'data')
+                ],
+            self.col_states             
+            )
+        def _build_dt(*inputs):
+            '''
+            Build a data table, where each column is a regex extracted phrase in the column of the orginal data,
+              like word "padd" from data whose columns were about EIA price/storage 
+            info from energy "padd" areas in the U.S.
+            
+            @param inputs: 
+                    1. n_clicks: from the col_info_btn
+                    2. data: from column_data_comp
+                    3 .. num_rows_input:  all of colname dcc.Input values
+                    3+num_rows_input .. end: all of the colvalue dcc.TextArea values that hold code used to 
+                                              extract
+            '''
+            # Ignore the first input, which is the n_clicks return from the button
+            n_clicks = inputs[0]
+            # The next input (inputs[1]) holds column_data_comp data
+            #   Use it get the original data, whose columns you wish to analyze
+            column_data_comp_data = inputs[1]
+            if column_data_comp_data is None:
+                raise PreventUpdate("ColumnInfo._build_dt no data")
+            # Put the original columns into the rows of the DataFrame df_columns
+            if type(column_data_comp_data) == pd.DataFrame:
+                df_columns =  column_data_comp_data
+            else:
+                df_columns = pd.DataFrame(column_data_comp_data)
+            cols = df_columns[self.column_key]
+            
+            # Now build the col_info dataframe, which will build "information" regex phrases that
+            #   allow you to group the original columns.
+            col_builder_inputs = {}
+            
+            # The inputs from 2 to the end (inputs[2:]) hold the col_info colnames and textareas with python code
+            col_states_arr = inputs[2:]
+            for i in range(self.num_rows_input):
+                col_name = col_states_arr[i]
+                expr_text =  col_states_arr[i+self.num_rows_input]
+                if (col_name is  None) or (len(col_name)<=0):
+                    continue
+                if (expr_text is  None) or (len(expr_text)<=0):
+                    continue
+                col_builder_inputs[col_name] = expr_text
+            dict_column_info_df = self._eval_df(col_builder_inputs,cols)
+            df_return = pd.DataFrame(dict_column_info_df)
+            ret_columns = [{'name':c,'id':c} for c in df_return.columns.values]
+            return df_return.to_dict('records'),ret_columns
+            
+
+class FeatureSelector(html.Div):
+    def _mkid(self,s):
+        return f"{self.main_id}_{s}"        
+    
+    def __init__(
+            self,app,main_id,
+            main_store,num_rows_input=None,
+            column_info_colname='colname',
+            logger=None,button_style=None
+            ):
+        self.main_id = main_id
+        self.app = app
+        self.logger = logger
+        if self.logger is None:
+            self.logger = init_root_logger()
+        self.main_store = main_store
+        self.column_info_colname = column_info_colname
+        self.column_store = dcc.Store(id=self._mkid('column_store'))
+
+        if num_rows_input is None:
+            num_rows_store = dcc.Store(id=self._mkid("num_rows_store"),data=ROWS_FOR_DASHTABLE)
+            self.num_rows_input = Input(num_rows_store.id,"data")
+        else:
+            self.num_rows_input = num_rows_input
+        
+        self.filter_btn = html.Button(
+            id=self._mkid('filter_button'),
+            children= "RUN FILTER",
+            style=button_style
+            )
+        
+        self.ddc = DdChooser(
+            self._mkid('dd_chooser'), 
+            self.column_store, 
+            num_filters=4, 
+            columns_to_filter=[self.column_info_colname], 
+            default_column_to_filter_value=self.column_info_colname,
+            logger=self.logger)
+        
+        filter_grid = html.Div(
+            [self.filter_btn,self.ddc],
+            style={'display':'grid','grid-template-columns':'10% 90%',
+                   'grid-template-rows':'1fr'}
+            )
+
+        self.dt_data = _make_dt(
+            self._mkid('dt_data'),pd.DataFrame(),
+            displayed_rows=ROWS_FOR_DASHTABLE,page_action='custom'
+        )
+
+        self.dt_data_div = html.Div([self.dt_data],self._mkid('dt_data_div'))
+        self.column_info = ColumnInfo(app, self._mkid('column_info'), 
+                                      self.dt_data, column_key='colname', logger=self.logger)
+        
+        self.column_info_unique_dt = _make_dt(
+            self._mkid('column_info_unique_dt'),pd.DataFrame(),
+            displayed_rows=ROWS_FOR_DASHTABLE,page_action='native'
+        )
+                
+        t1 = dcc.Tab(children=self.dt_data_div,
+                        label='Column Data',value='raw_data')
+        t2 = dcc.Tab(children=self.column_info,
+                        label='Build Column Info',value='column_info')
+        t3 = dcc.Tab(children=self.column_info_unique_dt,
+                        label='Unique Column Info',value='column_info_unique_dt')
+        
+        datatable_div = dcc.Tabs(
+            children=[t1,t2,t3,self.column_store], value='raw_data')
+        children =  html.Div([
+                            filter_grid,
+                            dcc.Loading(
+                                children=datatable_div, 
+                                fullscreen=True, type="dot"
+                                ),
+                        ],            
+                    )
+           
+        super(FeatureSelector,self).__init__(children,id=self._mkid('feature_viewer_div'))
+        print('FeatureSelector.__init__ done')
+
+    
+        
+    def register_app(self,theapp):
+        @theapp.callback(
+            Output(self.column_store.id,'data'),
+            Input(self.main_store.id,'data')
+            )
+        def _populate_column_store(df_main):
+#             print('entering FeatureSelector._populate_column_store')
+            if df_main is None or (len(df_main)<1):
+                raise PreventUpdate('FeatureSelector._populate_column_store: no main data')
+#             print('_populate_column_store')
+            main_cols = df_main.columns.values
+            df_return = pd.DataFrame(
+                {'colnum':list(range(len(main_cols))),
+                 self.column_info_colname:main_cols
+                 }
+                )
+            return df_return.to_dict('records')
+            
+        @theapp.callback(
+            [Output(self.dt_data.id,'page_size')],
+            [self.num_rows_input]
+        )
+        def _update_page_size(value):
+            print(f"_update_page_size: {value}")
+            return value
+                
+        @theapp.callback(
+            [
+                Output(self.dt_data.id,'data'),
+                Output(self.dt_data.id,'columns'),
+                Output(self.dt_data.id,'page_count'),
+                Output(self.column_info_unique_dt.id,'data'),
+                Output(self.column_info_unique_dt.id,'columns'),
+                ], 
+            [
+                Input(self.column_store.id, "data"),
+                Input(self.dt_data.id,'page_current'),
+                Input(self.filter_btn.id,'n_clicks'),
+                Input(self.dt_data.id,'sort_by'),
+                Input(self.column_info.column_info_dt.id,'data')
+                ],
+                [State(self.dt_data.id,'page_size'),State(self.ddc.query_store.id,'data')]
+            )
+        def display_df(dict_df, page_current,n_clicks,sort_by,column_info_dict,page_size,dtc_query_dict_df):            
+            print(f"entering FeatureSelector.display_df:{n_clicks}")
+            if dict_df is None:
+                raise PreventUpdate('CsvViewer.display_df callback: no data')
+            
+            # Get main data which has the columns that you want to analyze
+            df = pd.DataFrame(dict_df)
+            print(f"entering FeatureSelector.display_df: {datetime.datetime.now()} {len(df)} {page_size}")
+            pagcur = int(str(page_current))
+            if (pagcur is None) or (pagcur<0):
+                pagcur = 0
+            ps = ROWS_FOR_DASHTABLE
+            
+            if (page_size is not None):
+                ps = int(str(page_size))
+            df_after_filter = df
+            print('FeatureSelector.display_df: dtc_query_dict_df')
+            print(dtc_query_dict_df)
+            if (dtc_query_dict_df is not None):
+                df_dtc = pd.DataFrame(dtc_query_dict_df)
+                if len(df_dtc)>0:
+#                     df_after_filter = self.dtc.execute_filter_query(
+                    df_after_filter = execute_filter_query(
+                        df,df_dtc
+                        )
+            
+            if len(sort_by):
+                df_after_filter = df_after_filter.sort_values(
+                    [col['column_id'] for col in sort_by],
+                    ascending=[
+                        col['direction'] == 'asc'
+                        for col in sort_by
+                    ],
+                    inplace=False
+                )
+            
+            beg_row = pagcur*ps
+            if pagcur*ps > len(df):
+                beg_row = len(df) - ps
+        
+            dict_data = df_after_filter.iloc[beg_row:beg_row + ps].to_dict('records')
+            cols = [{"name": i, "id": i} for i in df_after_filter.columns.values]
+            page_count = int(len(df_after_filter)/ps) + (1 if len(df_after_filter) % ps > 0 else 0)
+
+#             # create df_unique
+#             df_unique =  create_unique_values(df_after_filter)
+#             dt_unique_div = html.Div([_make_dt(self._mkid('dt_unique'),df_unique)])
+# 
+#             df_agg = create_aggregate_summary(df_after_filter)
+#             dt_agg_div = html.Div([_make_dt(self._mkid('dt_agg'),df_agg)])
+            # Populate column_info.column_unique_info_dt
+            #   First re-create a DataFrame of the the column info, with columns for different categories of columns
+            df_column_info_dict = pd.DataFrame(column_info_dict)
+            df_column_info_dict_unique = create_unique_values(df_column_info_dict)
+            dict_column_info_dict_unique = df_column_info_dict_unique.to_dict('records')
+            columns_column_info_dict_unique = [{'label':c, 'id':c} for c in df_column_info_dict_unique.columns.values]
+
+            return dict_data,cols,page_count,dict_column_info_dict_unique,columns_column_info_dict_unique
+        
+        self.ddc.register_app(theapp)
+        self.column_info.register_app(theapp)
 
 class CsvViewer(html.Div):
     def __init__(self,app,main_id,
-                 main_store,num_rows_input=None,
+                 main_store,
+                 initial_columns_store=None,
+                 initial_columns_store_colname='colname',
+                 num_rows_input=None,
                  logger=None,button_style=None):
         self.main_id = main_id
         self.app = app
         if num_rows_input is None:
-            num_rows_store = dcc.Store(id=self._mkid("num_rows_store"),data=500)
+            num_rows_store = dcc.Store(id=self._mkid("num_rows_store"),data=ROWS_FOR_DASHTABLE)
             self.num_rows_input = Input(num_rows_store.id,"data")
         else:
             self.num_rows_input = num_rows_input
             
         self.main_store = main_store
+        
         
         self.filter_btn = html.Button(
             id=self._mkid('filter_button'),
@@ -591,10 +1116,13 @@ class CsvViewer(html.Div):
         self.dtc = DtChooser(
             self._mkid('dtc'),
             self.main_store,
+            initial_columns_store=initial_columns_store,
+            initial_columns_store_colname=initial_columns_store_colname,
             num_filters_rows=4,
             logger=logger)
         
-        self.dt_data = self._make_dt(
+#         self.dt_data = self._make_dt(
+        self.dt_data = _make_dt(
             self._mkid('dt_data'),pd.DataFrame(),
             displayed_rows=ROWS_FOR_DASHTABLE,page_action='custom'
         )
@@ -611,9 +1139,11 @@ class CsvViewer(html.Div):
         self.agg_div = html.Div(id=self._mkid('agg_div'))
         
         
-        graph_title_row = dashapp.make_page_title("XY Graph",div_id=self._mkid('graph_title_row'),html_container=html.H3)
+#         graph_title_row = dashapp.make_page_title("XY Graph",div_id=self._mkid('graph_title_row'),html_container=html.H3)
         self.graph1_div = XyGraphDefinition(self.dt_data, self._mkid('graph1'))
 #         self.graph1_div = html.Div([self.graph1_def.filter_div,graph_title_row,self.graph1_def.graph])
+        
+        
         
         t1 = dcc.Tab(children=self.dt_data_div,
                         label='Raw Data',value='raw_data')
@@ -641,24 +1171,6 @@ class CsvViewer(html.Div):
     def _mkid(self,s):
         return f"{self.main_id}_{s}"        
 
-    def _make_dt(self,dt_id,df,displayed_rows=100,page_action='native'):
-        dt = dash_table.DataTable(
-            id=dt_id,
-            page_current= 0,
-            page_size=displayed_rows,
-            page_action=page_action, 
-            sort_action='custom',
-            sort_mode='multi',
-            sort_by=[],
-            style_table={
-                'overflowY':'scroll',
-                'overflowX':'scroll',
-                'height': 'auto'
-            } ,
-        )
-        dt.data=df.to_dict('rows')
-        dt.columns=[{"name": i, "id": i} for i in df.columns.values]                    
-        return dt
 
     def register_app(self,theapp):
         @theapp.callback(
@@ -706,11 +1218,9 @@ class CsvViewer(html.Div):
             if (dtc_query_dict_df is not None):
                 df_dtc = pd.DataFrame(dtc_query_dict_df)
                 if len(df_dtc)>0:
-                    df_after_filter = self.dtc.execute_filter_query(
+                    df_after_filter = execute_filter_query(
                         df,df_dtc
                         )
-#                     if (cols_to_show is not None) and (len(cols_to_show)>0):
-#                         df_after_filter = df_after_filter[cols_to_show]                   
                     if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
                         cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
                         df_after_filter = df_after_filter[cols_to_show]                   
@@ -735,17 +1245,13 @@ class CsvViewer(html.Div):
             
             # create df_unique
             df_unique =  create_unique_values(df_after_filter)
-            dt_unique_div = html.Div([self._make_dt(self._mkid('dt_unique'),df_unique)])
+            dt_unique_div = html.Div([_make_dt(self._mkid('dt_unique'),df_unique)])
 
             df_agg = create_aggregate_summary(df_after_filter)
-            dt_agg_div = html.Div([self._make_dt(self._mkid('dt_agg'),df_agg)])
+            dt_agg_div = html.Div([_make_dt(self._mkid('dt_agg'),df_agg)])
             return dict_data,cols,page_count,dt_unique_div,dt_agg_div
         
-        dtc_callback = self.dtc.register_app(theapp)
+        self.dtc.register_app(theapp)
         self.graph1_div.register_app(theapp)
-#         xygraph_dashlinks = self.graph1_def.dashlinks
-#         for xygraph_dashlink in xygraph_dashlinks:
-#             xygraph_dashlink.callback(theapp)
-#         return _update_page_size,display_df,dtc_callback
 
 
