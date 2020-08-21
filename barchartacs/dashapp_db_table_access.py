@@ -761,8 +761,8 @@ class ColumnInfo(html.Div):
                 for expr in code.split('\n'):
                     if len(expr)>0:
                         val = eval(expr)
-            except:
-                continue
+            except Exception as e:
+                val = str(e)
             arr.append(val)
         return arr
     
