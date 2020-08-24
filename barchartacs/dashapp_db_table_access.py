@@ -589,8 +589,10 @@ class DtChooser(dash_table.DataTable):
             [Output(self.selected_columns_dd.id,'data'),
              Output(self.selected_columns_dd.id,'columns'),
              Output(self.selected_columns_dd.id,'selected_rows')],
-            [Input(self.main_store.id,'data')],
-            State(self.initial_column_store.id,'data')
+#             [Input(self.main_store.id,'data')],
+#             State(self.initial_column_store.id,'data')
+            [Input(self.main_store.id,'data'),
+            Input(self.initial_column_store.id,'data')]
             )
         def _get_cols(df,dict_initial_column_store):
             if df is None:
@@ -1193,17 +1195,22 @@ class CsvViewer(html.Div):
                 Input(self.main_store.id, "data"),
                 Input(self.dt_data.id,'page_current'),
                 Input(self.filter_btn.id,'n_clicks'),
-                Input(self.dt_data.id,'sort_by')
+                Input(self.dt_data.id,'sort_by'),
+                Input(self.dtc.selected_columns_dd.id,'data'),
+                Input(self.dtc.selected_columns_dd.id,'selected_rows')
                 ],
             [
                 State(self.dt_data.id,'page_size'),
                 State(self.dtc.id,'data'),
-                State(self.dtc.selected_columns_dd.id,'data'),
-                State(self.dtc.selected_columns_dd.id,'selected_rows')
+#                 State(self.dtc.selected_columns_dd.id,'data'),
+#                 State(self.dtc.selected_columns_dd.id,'selected_rows')
                 ]
             )
-        def display_df(df, page_current,_,sort_by,page_size,dtc_query_dict_df,
-                       selected_columns_dd_data,selected_columns_dd_selected_rows):
+#         def display_df(df, page_current,_,sort_by,page_size,dtc_query_dict_df,
+#                        selected_columns_dd_data,selected_columns_dd_selected_rows):
+        def display_df(df, page_current,_,sort_by,
+                       selected_columns_dd_data,selected_columns_dd_selected_rows,
+                       page_size,dtc_query_dict_df):
             if df is None:
                 raise PreventUpdate('CsvViewer.display_df callback: no data')
             print(f"entering display_df: {datetime.datetime.now()} {len(df)} {page_size}")
@@ -1221,9 +1228,13 @@ class CsvViewer(html.Div):
                     df_after_filter = execute_filter_query(
                         df,df_dtc
                         )
-                    if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
-                        cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
-                        df_after_filter = df_after_filter[cols_to_show]                   
+#                     if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
+#                         cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
+#                         df_after_filter = df_after_filter[cols_to_show]                   
+            print(f"CsvViewer.display_df selected_columns_dd_data:{selected_columns_dd_data}")
+            if (selected_columns_dd_data is not None) and (len(selected_columns_dd_data)>0):
+                cols_to_show = pd.DataFrame(selected_columns_dd_data).loc[selected_columns_dd_selected_rows].sort_index()['option'].values
+                df_after_filter = df_after_filter[cols_to_show]                   
             
             if len(sort_by):
                 df_after_filter = df_after_filter.sort_values(
