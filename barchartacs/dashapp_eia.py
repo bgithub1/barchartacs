@@ -199,7 +199,8 @@ def get_search_lists(df_pet_lower,column_extractor_list,isin_list,notin_list):
 
 class PaddVolumeCategories():
     def __init__(self,df_pet_lower):
-        column_extractor_list = [padd_name,padd_location,padd_production_type,padd_fuel_type]
+#         column_extractor_list = [padd_name,padd_location,padd_production_type,padd_fuel_type]
+        column_extractor_list = [padd_name,padd_production_type,padd_fuel_type]
         isin_list = ['(padd [1-5][a-z]{0,1}){1,2}','gasoline','of']
         notin_list = ['prices']
         self.df_cols = get_search_columns(df_pet_lower,column_extractor_list,isin_list,notin_list)
@@ -260,7 +261,8 @@ class HtmlDiv(html.Div):
 class EiaCategoriesDiv(HtmlDiv):
     def __init__(self,main_id,
                  input_pet_file='./temp_folder/df_pet_lower.csv',
-                 eia_categories_default_json='./temp_folder/eia_categories_default_config.json'
+                 eia_categories_default_json='./temp_folder/eia_categories_default_config.json',
+                 dropdown_option_height =70
                  ):
         super(EiaCategoriesDiv,self).__init__(main_id,None)
         # get default dropdown values
@@ -285,7 +287,7 @@ class EiaCategoriesDiv(HtmlDiv):
             dd = dcc.Dropdown(id=self._mkid(f'options_{col}'),options=options,value=value,
                               multi=True,
                               placeholder=col,
-                              optionHeight=63)
+                              optionHeight=dropdown_option_height)
             self.dd_children.append(dd)
         # default dropdowns_div style is row of dropdowns
         default_dropdowns_div_style={
@@ -372,7 +374,7 @@ class EiaAccess(HtmlDiv):
                 columns = df_main_store_data.columns.values[:num_displayable_columns]
             else:
                 padd_name = dropdowns_store['padd_name']
-                padd_location = dropdowns_store['padd_location']
+                padd_location = None#dropdowns_store['padd_location']
                 padd_production_type = dropdowns_store['padd_production_type']
                 padd_fuel_type = dropdowns_store['padd_fuel_type']
                 gas_price_region = dropdowns_store['gas_price_region']

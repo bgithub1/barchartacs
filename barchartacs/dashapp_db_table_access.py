@@ -198,7 +198,12 @@ def _make_dt(dt_id,df,displayed_rows=100,page_action='native'):
             'overflowY':'scroll',
             'overflowX':'scroll',
             'height': 'auto'
-        } ,
+        },
+        style_cell={
+        'whiteSpace': 'normal',
+        'height': 'auto',
+        },
+        
     )
     dt.data=df.to_dict('rows')
     dt.columns=[{"name": i, "id": i} for i in df.columns.values]                    
@@ -212,7 +217,7 @@ class XyGraphDefinition(html.Div):
         titles = ['X Column','Y Left Axis','Y Right Axis']
         self.prog_dd = progdd.ProgressiveDropdown(
             data_store,f'{div_id}_dropdowns',
-            len(titles),title_list=titles
+            len(titles),title_list=titles,use_title_divs=False
             )
         # create input divs for inputing y left and right axis titles
         y_left_axis_input = dcc.Input(value="Y MAIN",id=f"{div_id}_y_left_axis_input")
@@ -251,9 +256,15 @@ class XyGraphDefinition(html.Div):
         fr1 = dashapp.multi_column_panel(filter_rows[0:3])
         fr2 = dashapp.multi_column_panel(filter_rows[3:6])
         fr3 = dashapp.multi_column_panel(filter_rows[6:7])
-        filter_div =dashapp.multi_row_panel([fr1,fr2,fr3])
+#         filter_div =dashapp.multi_row_panel([fr1,fr2,fr3])
+        filter_div =html.Div([fr1,fr2,fr3])
         super(XyGraphDefinition,self).__init__(
-            [filter_div,self.graph_comp],id=div_id
+            [filter_div,self.graph_comp],id=div_id,
+            style={
+                'display':'grid',
+                'grid-template-rows':'1fr 3fr',
+                'grid-templage-columns':'1fr'
+                }
             )
         
         
@@ -280,7 +291,7 @@ class XyGraphDefinition(html.Div):
                 
             df = pd.DataFrame(dict_df)
             
-            yrc = [] if (y_right_cols is None) or (y_right_cols[0] is None) else y_right_cols
+            yrc = [] if (y_right_cols is None) or (len(y_right_cols)<1) else y_right_cols
             df = df[[x_col] + y_left_cols + yrc]
             fig = dashapp.plotly_plot(
                 df_in=df,x_column=x_col,yaxis2_cols=y_right_cols,

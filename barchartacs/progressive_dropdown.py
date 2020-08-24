@@ -31,7 +31,9 @@ class ProgressiveDropdown(html.Div):
                  dropdown_id,
                  number_of_dropdowns,                          
                  label_list=None,
-                 title_list=None):
+                 title_list=None,
+                 use_title_divs=True
+                 ):
         self.init_values_source = init_values_source
         current_parent = None
         pd_dd_list = []
@@ -41,11 +43,11 @@ class ProgressiveDropdown(html.Div):
             curr_id = f"{dropdown_id}_v{i}"
             title = None if (title_list is None) or (len(title_list) < i+1) else title_list[i]
             pd_dd = _ProgressiveDropdownChild(
-                curr_id,current_parent)
+                curr_id,current_parent,placeholder=title)
             current_parent = pd_dd
             # wrap dropdown with title 
             dropdown_rows = [pd_dd]
-            if (title_list is not None) and (len(title_list)>i):
+            if (title_list is not None) and (len(title_list)>i) and use_title_divs:
                 title_div = make_text_centered_div(title_list[i])
                 dropdown_rows = [title_div,pd_dd]
             dropdown_div = multi_row_panel(dropdown_rows)
@@ -79,12 +81,14 @@ class ProgressiveDropdown(html.Div):
 
 class _ProgressiveDropdownChild(dcc.Dropdown):
     def __init__(self,
-                 dropdown_id,parent_dropdown,multi=True
+                 dropdown_id,parent_dropdown,multi=True,
+                 placeholder=None
                  ):
         self.parent_dropdown = parent_dropdown
         super(_ProgressiveDropdownChild,self).__init__(
             id=dropdown_id,
             multi=multi,
+            placeholder=placeholder
         )
         
     def register_app(self,theapp):
