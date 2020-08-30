@@ -82,13 +82,15 @@ class ProgressiveDropdown(html.Div):
 class _ProgressiveDropdownChild(dcc.Dropdown):
     def __init__(self,
                  dropdown_id,parent_dropdown,multi=True,
-                 placeholder=None
+                 placeholder=None,
+                 optionHeight=70
                  ):
         self.parent_dropdown = parent_dropdown
         super(_ProgressiveDropdownChild,self).__init__(
             id=dropdown_id,
             multi=multi,
-            placeholder=placeholder
+            placeholder=placeholder,
+            optionHeight=optionHeight
         )
         
     def register_app(self,theapp):

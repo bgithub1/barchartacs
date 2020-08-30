@@ -15,6 +15,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash_extensions.enrich import Dash, ServersideOutput, Output, Input, State, Trigger
 from dash.exceptions import PreventUpdate
+import flask
 import dash_table
 import numpy as np
 import pandas as pd
@@ -28,6 +29,11 @@ import db_info#@UnresolvedImport
 from dashapp import dashapp2 as dashapp#@UnResolvedImport
 import progressive_dropdown as progdd#@UnResolvedImport
 import logging
+import base64
+import io
+import zipfile
+
+
 args = sys.argv
 
 configs = open('./temp_folder/dashapp_db_table_config_name.txt','r').read().split(',')
@@ -45,6 +51,24 @@ MAIN_ID = 'tdb'
 DEFAULT_LOG_PATH = './logfile.log'
 DEFAULT_LOG_LEVEL = 'INFO'
 
+
+def df_to_zipiofile(df,filename):
+    sio2 = io.StringIO()
+    df.to_csv(sio2,index=False)
+    sio2.seek(0)
+    zoio2 = io.BytesIO()
+    f = zipfile.ZipFile(zoio2,'a',zipfile.ZIP_DEFLATED,False)
+    f.writestr(filename,sio2.read())
+    f.close() 
+    zoio2.seek(0)
+    return zoio2
+
+def df_to_zipfile(df,filename,fullpath):
+    zz = df_to_zipiofile(df,filename)
+    ff = open(fullpath,'wb')
+    ff.write(zz.getbuffer())
+    ff.close()  
+      
 def init_root_logger(logfile=DEFAULT_LOG_PATH,logging_level=None):
     level = logging_level
     if level is None:
@@ -297,6 +321,8 @@ class XyGraphDefinition(html.Div):
                 df_in=df,x_column=x_col,yaxis2_cols=y_right_cols,
                 y_left_label=y_left_label,y_right_label=y_right_label,
                 plot_title=graph_title)
+            fig.update_layout(autosize=True,hovermode='x unified',
+                              hoverlabel = dict(namelength = -1))
             return fig
         self.prog_dd.register_app(theapp)
 
@@ -359,6 +385,7 @@ class ZipAccess(html.Div):
     
     def __init__(self,app,main_id,zip_or_csv='zip',logger=None):
         self.main_id = main_id
+        self.save_store = dcc.Store(id=self._mkid("save_store"))
         self.app = app
         self.logger = init_root_logger() if logger is None else logger
         self.zip_or_csv = zip_or_csv
@@ -439,6 +466,12 @@ class ZipAccess(html.Div):
             self.logger.debug(f"_update_main_store")
             return df
             
+        @theapp.callback(
+            Output(self.save_store.id,'data'),
+            Input(self.uploader_comp.id,'filename')
+            )
+        def _update_save(filename):
+            return {'filename':filename}
         return _update_filename,_update_main_store   
         
         
@@ -670,9 +703,6 @@ class DdFilterDiv(html.Div):
             debounce=True,
             style={'overflow':'auto'}
             )
-#         operator = dcc.Textarea(
-#             id=f'{dd_filter_div_id}_inp',
-#             )
         super(DdFilterDiv,self).__init__(
             [column_dd,operation_dd,operator],
             style={
@@ -946,6 +976,7 @@ class FeatureSelector(html.Div):
             logger=None,button_style=None
             ):
         self.main_id = main_id
+        self.save_store = dcc.Store(id=self._mkid('save_store'))
         self.app = app
         self.logger = logger
         if self.logger is None:
@@ -1027,6 +1058,27 @@ class FeatureSelector(html.Div):
     
         
     def register_app(self,theapp):
+        @theapp.callback(
+            Output(self.save_store.id,'data'),
+            Input(self.filter_btn.id,'n_clicks'),
+            [
+                State(self.column_info.column_info_dt.id,'data'),
+                State(self.ddc.query_store.id,'data'),
+                State(self.ddc_or.query_store.id,'data'),
+                ]
+            )
+        def _update_save(
+                _,
+                column_info_dict,
+                dtc_query_dict_df,
+                dtc_or_query_dict_df
+                ):
+            return {
+                'column_info':column_info_dict,
+                'ddc':dtc_query_dict_df,
+                'dtc_or':dtc_or_query_dict_df
+                }
+        
         @theapp.callback(
             Output(self.column_store.id,'data'),
             Input(self.main_store.id,'data')
@@ -1331,4 +1383,42 @@ class CsvViewer(html.Div):
         self.dtc.register_app(theapp)
         self.graph1_div.register_app(theapp)
 
-
+class FiledownloadComponent(html.Div):
+    def _mkid(self,s):
+        return f"{self.main_id}_{s}"        
+    
+    def __init__(self,main_id,route_url,logger=None):
+        self.main_id = main_id
+        self.route_url = route_url
+        self.logger = init_root_logger() if logger is None else logger
+        # create important id's
+        
+        # create callback that populates the A link
+        def _update_link(input_value):
+            v = input_value[0]
+            if v is None:
+                v = self.dropdown_values[0]
+            return ['/dash/urlToDownload?value={}'.format(v)]        
+        self.filename_input = dcc.Input(
+            id=self._mkid('filename_input'),
+            debounce=True
+            )
+        self.href_comp = html.A("Save Config",href='',id=self._mkid('href_comp'))
+        super(FiledownloadComponent,self).__init__()
+    
+    def register_app(self,theapp):
+        @theapp.server.route(self.route_url)
+        def download_csv():
+            value = flask.request.args.get('value')            
+            fn = self.route_url
+            print(f'FileDownLoadDiv callback file name = {fn}')
+            return flask.send_file(fn,
+                               mimetype='json',
+                               attachment_filename=fn,
+                               as_attachment=True)
+        @theapp.callback(
+            Output(self.href_comp.id,'href'),
+            Input(self.filename_input.id,'value')
+            )
+        def _update_filename():
+            pass
