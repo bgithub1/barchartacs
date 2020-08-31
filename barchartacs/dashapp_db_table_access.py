@@ -32,6 +32,9 @@ import logging
 import base64
 import io
 import zipfile
+import spacy
+import pytextrank
+
 
 
 args = sys.argv
@@ -50,6 +53,32 @@ MAIN_ID = 'tdb'
 
 DEFAULT_LOG_PATH = './logfile.log'
 DEFAULT_LOG_LEVEL = 'INFO'
+
+def create_nlp_doc(df):
+    
+    reports_text = '\n'.join(df.apply(lambda r:' '.join(r.values.astype(str)),axis=1).values)[:999999]
+
+    # example text
+    text = reports_text
+    # load a spaCy model, depending on language, scale, etc.
+    nlp = spacy.load("en_core_web_sm")#@UnDefinedVariable
+
+    # add PyTextRank to the spaCy pipeline
+    tr = pytextrank.TextRank()
+    nlp.add_pipe(tr.PipelineComponent, name="textrank", last=True)
+
+    doc = nlp(text)
+
+    # examine the top-ranked phrases in the document
+    df_docs = pd.DataFrame(
+        {
+            'prank':[p.rank for p in doc._.phrases],
+            'pcount':[p.count for p in doc._.phrases],
+            'ptext':[p.text for p in doc._.phrases],
+            'pcomb':[p.rank*p.count for p in doc._.phrases]
+        }
+    )
+    return df_docs
 
 
 def df_to_zipiofile(df,filename):
@@ -135,8 +164,14 @@ def create_unique_values(df):
 
 
 def create_aggregate_summary(df,rounding=4):
-    cols = df.columns.values
-    num_cols = [c for c in cols if (df[c].dtype=='float64') or (df[c].dtype=='int64')]
+    try:
+        cols = df.columns.values
+        num_cols = [c for c in cols if (df[c].dtype=='float64') or (df[c].dtype=='int64')]
+    except Exception as e:
+        print(f'create_aggregate_summary Exception: {str(e)}')
+        print(f'create_aggregate_summary df')
+        print(df)
+        return pd.DataFrame()
     df_ret = df[num_cols].describe().transpose()
     ret_cols = ['col'] + list(df_ret.columns.values)
     df_ret['col'] = df_ret.index.values
@@ -611,7 +646,7 @@ class DtChooser(dash_table.DataTable):
                                                   data={})
         
         self.num_filters_rows = num_filters_rows
-        self.logger = logger
+        self.logger = init_root_logger() if logger is None else logger
         
         super(DtChooser,self).__init__(
             id=dt_chooser_id,
@@ -654,7 +689,14 @@ class DtChooser(dash_table.DataTable):
             df_initial_column_store = pd.DataFrame(dict_initial_column_store)
             if len(df_initial_column_store)>0:
                 initial_columns = df_initial_column_store[self.initial_columns_store_colname].values
-                df = df[initial_columns]
+                try:
+                    df = df[initial_columns]
+                except Exception as e:
+                    self.logger.warn(f'DtChooser._get_cols Exception: {str(e)}')
+                    self.logger.warn(f'DtChooser._get_cols initial_columns: {initial_columns}')
+                    self.logger.warn(f'DtChooser._get_cols df: ')
+                    self.looger.warn(df.to_string())
+                    PreventUpdate(str(e))
             df_return = pd.DataFrame({'option':df.columns.values})
             data = df_return.to_dict('records')
             columns = [{'name':c,'id':c} for c in df_return.columns.values]
@@ -1033,16 +1075,33 @@ class FeatureSelector(html.Div):
             self._mkid('column_info_unique_dt'),pd.DataFrame(),
             displayed_rows=ROWS_FOR_DASHTABLE,page_action='native'
         )
+        
+        self.column_category_suggestions_dt = _make_dt(
+            self._mkid('column_category_suggestions'),pd.DataFrame(),
+            displayed_rows=ROWS_FOR_DASHTABLE,page_action='native'
+        )
+        
+        self.column_category_suggestions_btn = html.Button(
+            'Build Column Category Suggestions',
+            id=self._mkid('column_category_suggestions_btn'))
+        self.column_category_suggestions_div = html.Div(
+            [
+                self.column_category_suggestions_btn,
+                dcc.Loading(children=[self.column_category_suggestions_dt])
+             ]
+            )
                 
         t1 = dcc.Tab(children=self.dt_data_div,
                         label='Column Data',value='raw_data')
         t2 = dcc.Tab(children=self.column_info,
-                        label='Build Column Info',value='column_info')
+                        label='Build Column Categories',value='column_info')
         t3 = dcc.Tab(children=self.column_info_unique_dt,
-                        label='Unique Column Info',value='column_info_unique_dt')
+                        label='Unique Column Categories',value='column_info_unique_dt')
+        t4 = dcc.Tab(children=self.column_category_suggestions_div,
+                        label='Suggested Column Categories',value='column_category_suggestions_div')
         
         datatable_div = dcc.Tabs(
-            children=[t1,t2,t3,self.column_store], value='raw_data')
+            children=[t1,t2,t3,t4,self.column_store], value='raw_data')
         children =  html.Div([
                             filter_grid,
                             dcc.Loading(
@@ -1135,7 +1194,7 @@ class FeatureSelector(html.Div):
                 ):            
             self.logger.debug(f"entering FeatureSelector.display_df:{n_clicks}")
             if dict_df is None:
-                raise PreventUpdate('CsvViewer.display_df callback: no data')
+                raise PreventUpdate('FeatureSelector.display_df callback: no data')
             
             # Get main data which has the columns that you want to analyze
             df = pd.DataFrame(dict_df)
@@ -1204,6 +1263,28 @@ class FeatureSelector(html.Div):
             columns_column_info_dict_unique = [{'label':c, 'id':c} for c in df_column_info_dict_unique.columns.values]
 
             return dict_data,cols,page_count,dict_column_info_dict_unique,columns_column_info_dict_unique
+        
+        @theapp.callback(
+            [
+                Output(self.column_category_suggestions_dt.id,'data'),
+                Output(self.column_category_suggestions_dt.id,'columns'),
+                ],
+            Input(self.column_category_suggestions_btn.id,'n_clicks'),
+#             State(self.column_store.id,'data')
+            State(self.dt_data.id,'data'),
+            )
+        def _create_column_category_suggestions(_,dict_dt_data):
+            if dict_dt_data is None:
+                raise PreventUpdate('FeatureSelector._create_column_category_suggestions callback: no data')
+            df = pd.DataFrame(dict_dt_data) 
+            df_cols = df[[self.column_info_colname]]
+            df_doc  = create_nlp_doc(df_cols)
+            df_doc2 = df_doc[df_doc.ptext.str.split(' ').str.len()<=3]
+            df_doc3 = df_doc2[~df_doc2.ptext.str.contains('^[0-9]')].sort_values('prank',ascending=False)
+            columns = [{'label':c, 'id':c} for c in df_doc3.columns.values]
+            dict_df3 = df_doc3.to_dict('records')
+            return dict_df3,columns
+        
         
         self.ddc.register_app(theapp)
         self.ddc_or.register_app(theapp)
