@@ -419,6 +419,13 @@ class ZipAccess(html.Div):
         return f"{self.main_id}_{s}"        
     
     def __init__(self,app,main_id,zip_or_csv='zip',logger=None):
+        '''
+        
+        :param app:
+        :param main_id:
+        :param zip_or_csv:
+        :param logger:
+        '''
         self.main_id = main_id
         self.save_store = dcc.Store(id=self._mkid("save_store"))
         self.app = app

@@ -22,6 +22,7 @@ args = sys.argv
 
 DEFAULT_LOG_PATH = './logfile.log'
 DEFAULT_LOG_LEVEL = 'INFO'
+DEFAULT_INPUT_CSV_FILE = 'temp_folder/df_pet_weekly.csv'
 
 def init_root_logger(logfile=DEFAULT_LOG_PATH,logging_level=None):
     level = logging_level
@@ -260,7 +261,8 @@ class HtmlDiv(html.Div):
 
 class EiaCategoriesDiv(HtmlDiv):
     def __init__(self,main_id,
-                 input_pet_file='./temp_folder/df_pet_lower.csv',
+#                  input_pet_file='./temp_folder/df_pet_lower.csv',
+                 input_pet_file=DEFAULT_INPUT_CSV_FILE,
                  eia_categories_default_json='./temp_folder/eia_categories_default_config.json',
                  dropdown_option_height =70
                  ):
@@ -320,7 +322,9 @@ class EiaCategoriesDiv(HtmlDiv):
             return dropdowns_store_data
         
 class EiaAccess(HtmlDiv):
-    def __init__(self,main_id,input_pet_file='./temp_folder/df_pet_lower.csv'):
+    def __init__(self,main_id,
+#                  input_pet_file='./temp_folder/df_pet_lower.csv'):
+                 input_pet_file=DEFAULT_INPUT_CSV_FILE):
         super(EiaAccess,self).__init__(main_id,None)
         self.main_store = dcc.Store(id=self._mkid('main_store'))
         self.trigger_interval = dcc.Interval(

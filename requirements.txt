@@ -21,6 +21,7 @@ pytz==2020.1
 pytextrank==2.0.2
 selenium==3.141.0
 dash_html_components==1.0.3
+dash-core-components==1.10.2
 #dashapp.egg==info
 pandas_datareader==0.8.1
 ipdb==0.13.2
