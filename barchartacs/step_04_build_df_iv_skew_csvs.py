@@ -60,7 +60,11 @@ DICT_MONTH_NUMS = {MONTH_CODES[i]:i+1 for i in range(len(MONTH_CODES))}
 DEBUG_IT=False
 opttab = 'sec_schema.options_table'
 futtab = 'sec_schema.underlying_table'
-pga = db_info.get_db_info()
+config_name = None
+argvs = sys.argv
+if len(argvs)>1:
+    config_name = argvs[1]
+pga = db_info.get_db_info(config_name=config_name)
 SYMBOL_TO_RESEARCH = 'ES'
 STRIKE_DIVISORS = {}
 
