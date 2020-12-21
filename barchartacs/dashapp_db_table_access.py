@@ -42,9 +42,9 @@ args = sys.argv
 configs = open('./temp_folder/dashapp_db_table_config_name.txt','r').read().split(',')
 config_name=configs[0]
 
-app_port = 8812
-if len(configs)>1:
-    app_port=int(configs[1])
+# app_port = 8812
+# if len(configs)>1:
+#     app_port=int(configs[1])
     
 # get pga
 pga = db_info.get_db_info(config_name=config_name)
