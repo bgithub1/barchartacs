@@ -145,7 +145,9 @@ if __name__ == '__main__':
     
 
     SINGLE_YYYYMM = args.single_yyyymm
-    SINGLE_YYYYMM = None if len(str(SINGLE_YYYYMM))<1 else int(str(SINGLE_YYYYMM))
+    if SINGLE_YYYYMM is not None and len(str(SINGLE_YYYYMM))<1:
+        SINGLE_YYYYMM = None
+    print(f'SINGLE_YYYYMM= {SINGLE_YYYYMM}')
     WRITE_TO_POSTGRES = args.write_to_postgres.lower() == 'true'
     CONTRACT_LIST = args.contract_list.split(',')
     STRIKE_DIVISOR_DICT = json.load(open(args.strike_divisor_json_path,'r'))
