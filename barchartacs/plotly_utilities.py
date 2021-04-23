@@ -230,7 +230,8 @@ def plotly_plot(df_in,x_column,plot_title=None,
                 title_x_pos = 0.5,
                 add_crosshairs=True,
                 go_functions = None,
-                opacity_list = None
+                opacity_list = None,
+                center_title = True
                ):
     
     ya2c = [] if yaxis2_cols is None else yaxis2_cols
@@ -312,6 +313,8 @@ def plotly_plot(df_in,x_column,plot_title=None,
         fig.update_layout(legend=dict(x=legend_x, y=legend_y))
     if add_crosshairs:
         fig = figure_crosshairs(fig)
+    if center_title:
+        fig.update_layout(title_x=0.5)
     return fig
 
 def plotly_bar_plot(df_in,x_column,num_of_x_ticks=20,plot_title=None,

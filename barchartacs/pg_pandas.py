@@ -109,6 +109,35 @@ class PgPandas(object):
         self.exec_sql_raw(sql)
         pass
 
+    def psql_copy(self,
+                  full_table_name,
+                  csv_file_path,
+                  delimiter=',',
+                  write_to_postgres=False):
+        '''
+        Write a csv file to postgres table using psql.
+        
+        :param full_table_name: table name with schema, like ,myschema.mytable
+        :param csv_temp_path: path to csv file, containing rows to be written to postgres
+        :param delimiter: default = ','.
+        :param write_to_postgres: If False, then print the command so that
+                  it can be executed in bash.
+                  If True, execute the bash command using os.system
+        '''
+        # first get column names in order as they appear in postgres
+        abs_csv_path = os.path.abspath(csv_file_path)
+        copy_cmd = f"\COPY {full_table_name} FROM '{abs_csv_path}' DELIMITER '{delimiter}' CSV HEADER;"
+        if self.username is not None:
+            psql_cmd = f'sudo -u {self.username} psql -d sec_db -c "CMD"'
+        else:
+            psql_cmd = f'psql  -d sec_db -c "CMD"'
+        psql_cmd = psql_cmd.replace('CMD',copy_cmd)
+        if  write_to_postgres:  # double check !!!
+            self.logger.info(f'BEGIN executing psql COPY command: {psql_cmd}')
+            os.system(psql_cmd)
+            self.logger.info(f'END executing psql COPY command')
+        else:
+            print(psql_cmd)
 
     def exec_sql_raw(self,sql):
         '''
