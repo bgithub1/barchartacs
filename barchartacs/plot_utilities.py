@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import pandas_datareader.data as pdr
+import yfinance as yf
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
@@ -42,7 +43,8 @@ def str_to_date(d,sep='-'):
     return dt
 
 def fetch_history(symbol,dt_beg,dt_end):
-    df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
+#     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
+    df = yf.download(symbol, dt_beg, dt_end)
     # move index to date column, sort and recreate index
     df['date'] = df.index
     df = df.sort_values('date')

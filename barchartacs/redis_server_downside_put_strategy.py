@@ -43,6 +43,8 @@ import ipdb,pdb
 import traceback
 
 import pandas_datareader.data as pdr
+import yfinance as yf
+
 from scipy.stats import norm
 
 import pyarrow as pa
@@ -83,7 +85,8 @@ def str_to_date(d,sep='-'):
 
 
 def fetch_history(symbol,dt_beg,dt_end):
-    df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
+#     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
+    df = yf.download(symbol, dt_beg, dt_end)
     # move index to date column, sort and recreate index
     df['date'] = df.index
     df = df.sort_values('date')
