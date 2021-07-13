@@ -32,7 +32,7 @@ from dateutil.relativedelta import relativedelta
 from barchartacs import schedule_it as sch
 import pandas_datareader.data as pdr
 import yfinance as yf
-
+import traceback
 import json
 import requests
 
@@ -72,7 +72,7 @@ def str_to_date(d,sep='-'):
 
 def fetch_history(symbol,dt_beg,dt_end):
 #     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
-    df = yf.download(symbol, dt_beg, dt_end)
+    df = yf.download(symbol, dt_beg, dt_end,threads=False)
     # move index to date column, sort and recreate index
     df['date'] = df.index
     df = df.sort_values('date')
@@ -84,6 +84,23 @@ def fetch_history(symbol,dt_beg,dt_end):
     df = df.rename(columns = cols_dict)
     df['settle_date'] = df.date.apply(str_to_yyyymmdd)
     return df
+
+def update_wf_port_info(syms):
+    try:
+        names = syms if type(syms)==list else syms.tolist()
+        tickers = yf.Tickers(names)
+        dict_list = []
+        for n in tqdm.tqdm(names):
+#             dict_list.append(tickers.tickers[n].get_info())
+            d = tickers.tickers[n].get_info()
+            d['symbol'] = n
+            dict_list.append(d)
+        df_info_values = pd.DataFrame(dict_list)
+        info_values_key = 'wf_port_info_csv'
+        update_redis_df(info_values_key,df_info_values)
+    except Exception as e:
+        traceback.print_exc()
+
 
 def update_redis_df(key,df):
     context = pa.default_serialization_context()#@UndefinedVariable
@@ -120,7 +137,7 @@ def update_db(beg_sym=None,port_path=None):
             except Exception as e:
                 print(f"ERROR on {sym}: {str(e)}")
         
-    
+    update_wf_port_info(syms)
 
 
 # In[6]:
