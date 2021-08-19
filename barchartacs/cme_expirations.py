@@ -148,6 +148,14 @@ def get_NG_options_expiry(symbol):
     year = 2000 + int(monthcode_yy[1:])
     return datetime.datetime(year,month,1) - 4*bday_us
 
+def get_NG_futures_expiry(symbol):
+    # Trading terminates on the 3rd last business day of the month prior to the contract month
+    monthcode_yy = symbol[-3:]
+    month = DICT_MONTH_CODE[monthcode_yy[0]]
+    year = 2000 + int(monthcode_yy[1:])
+    return datetime.datetime(year,month,1) - 3*bday_us
+
+
 def get_GE_options_expiry(symbol):
     """
     Quarterly:
@@ -265,7 +273,8 @@ DICT_PRODUCT = {
 
 DICT_FUTURES_PRODUCT = {
     'CL':get_CL_futures_expiry,
-    'ES':get_ES_options_expiry, # futures and options expire together
+    'ES':get_ES_options_expiry, # futures and options expire together,
+    'NG':get_NG_futures_expiry
 }
 
     

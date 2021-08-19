@@ -152,7 +152,8 @@ def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None):
         logger.info(f"updating history")
         update_db(beg_sym=beg_sym,port_path=port_path)
         logger.info(f"sleeping until next {t} {unit} before next scheduling")
-        time.sleep(60*60)
+#         time.sleep(60*60)
+        time.sleep(5*60)
     
 
 

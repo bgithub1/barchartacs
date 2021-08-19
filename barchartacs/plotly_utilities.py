@@ -237,7 +237,7 @@ def plotly_plot(df_in,x_column,plot_title=None,
     ya2c = [] if yaxis2_cols is None else yaxis2_cols
     ycols = [c for c in df_in.columns.values if c != x_column]
     # create tdvals, which will have x axis labels
-    td = list(df_in[x_column]) 
+    td = list(df_in[x_column]) if x_column is not None else df_in.index.values
     nt = len(df_in)-1 if number_of_ticks_display > len(df_in) else number_of_ticks_display
     spacing = len(td)//nt
     tdvals = td[::spacing]

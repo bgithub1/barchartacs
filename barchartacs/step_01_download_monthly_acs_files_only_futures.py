@@ -113,7 +113,7 @@ if __name__ == '__main__':
     logger = init_root_logger(log_file_path, logging_level)
     
     logger.info(f'ZIP_FOLDER_PARENT into which files will be download = {ZIP_FOLDER_PARENT}')
-    headless = args.show_browser
+    headless = False if args.show_browser else True
     
     
     '''

@@ -26,22 +26,11 @@ import io
 import urllib.request
 from tqdm import tqdm,tqdm_notebook
 
-import ipdb
-import importlib
-# importlib.reload(db_info)
-
 
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-WRITE_TO_POSTGRES = True
-CONTRACT_LIST = ['ES','CL','NG']
+CONTRACT_LIST = ['ES','CL','CB','NG']
 STRIKE_DIVISOR = 1
 CSV_TEMP_PATH_OPTIONS = './temp_folder/df_all_temp_options.csv'
 CSV_TEMP_PATH_FUTURES = './temp_folder/df_all_temp_futures.csv'
@@ -53,26 +42,28 @@ FUTTAB = 'sec_schema.underlying_table'
 # In[ ]:
 
 
-
-
-
-# In[ ]:
-
-
-def psql_copy(pga,full_tablename,csv_temp_path,logger,write_to_postgres=False):
+def psql_copy(pga,full_tablename,csv_temp_path,write_to_postgres=False,logger=None):
     # first get column names in order as they appear in postgres
     db_username = pga.username
     
     copy_cmd = f"\COPY {full_tablename} FROM '{csv_temp_path}' DELIMITER ',' CSV HEADER;"
-    if db_username is not None and len(db_username)>0:
+    if db_username is not None and len(db_username.strip())>0:
         psql_cmd = f'sudo -u {db_username} psql -d sec_db -c "CMD"'
     else:
         psql_cmd = f'psql  -d sec_db -c "CMD"'
     psql_cmd = psql_cmd.replace('CMD',copy_cmd)
     if  write_to_postgres:  # double check !!!
-        logger.info(f'BEGIN executing psql COPY command: {psql_cmd}')
+        msg = f'BEGIN executing psql COPY command: {psql_cmd}'
+        if logger is None:
+            print(msg)
+        else:
+            logger.info(msg)
         os.system(psql_cmd)
-        logger.info(f'END executing psql COPY command')
+        msg = f'END executing psql COPY command'
+        if logger is None:
+            print(msg)
+        else:
+            logger.info(msg)
     else:
         print(psql_cmd)
 
@@ -102,7 +93,7 @@ def do_request(url,dict_headers=None):
 
 
 def build_daily(commod_code_list,yyyymmdd=None,barchart_auth_code=None,text_file_path=None,
-               divisor_dict = DIVISOR_DICT):
+               divisor_dict = DIVISOR_DICT,pga=None):
     '''
     commod_code_list: like ['ES'] or ['CL','CB']
     yyyymmdd: like 20190705.  It must be a date in the current month
@@ -127,7 +118,7 @@ def build_daily(commod_code_list,yyyymmdd=None,barchart_auth_code=None,text_file
     opvtxt = opvtxt.decode('utf-8')
     open(tfp,'w').write(opvtxt)
     builder = build_db.BuildDb(None,strike_divisor_dict=divisor_dict,
-                           contract_list=commod_code_list,write_to_database=False)
+                           contract_list=commod_code_list,write_to_database=False,pga=pga)
     dft = builder.build_options_pg_from_csvs(tfp)
     return dft
 
@@ -240,6 +231,8 @@ def build_futures_daily(yyyymmdd,logger):
          ('adj_close','numeric'),('volume','integer'),('open_interest','integer')]
     col_list = [l[0] for l in col_tuple_list]
     return dfu5[col_list]
+#     print(f'creating csv file {CSV_TEMP_PATH_FUTURES}: {datetime.datetime.now()}')
+#     dfu5[col_list].to_csv(os.path.abspath(CSV_TEMP_PATH_FUTURES),index=False)
     
 
 
@@ -262,41 +255,24 @@ def get_commod_list_from_max_settle_date(pga,tablename=FUTTAB):
     df_fut_commods_in_last_day = pga.get_sql(commods_in_last_day_sql)
     return list(df_fut_commods_in_last_day.commod.values)
 
-def get_dates_to_fetch(pga,tablename,symbol_list=None):
+def get_dates_to_fetch(pga,tablename):
     """
     :param tablename: like OPTTAB or FUTTAB
     This method will return a list of yyyymmdd's.  IT WILL NOT RETURN THE CURRENT DAY.
     """
     t = datetime.datetime.now()
-    all_symbols = symbol_list
-    if all_symbols is None:
-        all_contracts = pga.get_sql(f"select distinct symbol from {tablename}")
-        all_symbols = [s[:-3] for s in all_contracts]
-    dict_sym_yyyymm_list = {}
-    for sym in all_symbols:
-        max_yyyymmdd = pga.get_sql(
-            f"select max(settle_date) maxdate from {tablename} where substring(symbol,1,{len(sym)})='{sym}'"
-        ).iloc[0].maxdate
-        max_year = int(str(max_yyyymmdd)[0:4])
-        max_month = int(str(max_yyyymmdd)[4:6])
-        max_day = int(str(max_yyyymmdd)[6:8])
-        max_dt = datetime.datetime(max_year,max_month,max_day)
-        num_days = (t - max_dt).days
-        dates_to_process = [max_dt + datetime.timedelta(n) for n in range(1,num_days)]
-        yyyymmdds_to_process = [dt_to_yyyymmdd(d) for d in dates_to_process]
-        dict_sym_yyyymm_list[sym] = yyyymmdds_to_process
-    return dict_sym_yyyymm_list
-
-
-# ### Execute a range of days
-
-# In[ ]:
-
+    max_yyyymmdd = pga.get_sql(f'select max(settle_date) maxdate from {tablename}').iloc[0].maxdate
+    max_year = int(str(max_yyyymmdd)[0:4])
+    max_month = int(str(max_yyyymmdd)[4:6])
+    max_day = int(str(max_yyyymmdd)[6:8])
+    max_dt = datetime.datetime(max_year,max_month,max_day)
+    num_days = (t - max_dt).days
+    dates_to_process = [max_dt + datetime.timedelta(n) for n in range(1,num_days)]
+    yyyymmdds_to_process = [dt_to_yyyymmdd(d) for d in dates_to_process]
+    return yyyymmdds_to_process
+    
 
 if __name__=='__main__':
-    if 'ipykernel_launcher' in sys.argv[0]:
-        sys.argv = sys.argv[:1] + ['--contract_list','CL,ES,NG','--write_to_postgres',str(WRITE_TO_POSTGRES)]
-
     parser =  ap.ArgumentParser()
     parser.add_argument('--log_file_path',type=str,
                         help='path to log file. Default = logfile.log',
@@ -310,9 +286,6 @@ if __name__=='__main__':
     parser.add_argument('--config_name',type=str,
                         help='value of the config_name column in the db config csv file (default is local',
                         default="local")
-    parser.add_argument('--contract_list',type=str,
-                        help='a comma delimited string of commodity codes.  Default = CL,ES,NG',
-                        default = 'CL,ES,NG')
     parser.add_argument('--strike_divisor_json_path',type=str,
                         help='if specified, a path to a json file that contains divisors for each commodity in contract_list',
                         default = './divisor_dict.json')
@@ -321,31 +294,29 @@ if __name__=='__main__':
                         default="False")
     args = parser.parse_args()
     
-    # create logger and pga instance
-    logger = build_db.init_root_logger('logfile.log','INFO' )
-    pga = db_info.get_db_info(args.config_name, './postgres_info.csv')
+    logger = build_db.init_root_logger(args.log_file_path, args.logging_level)
+    pga = db_info.get_db_info(args.config_name, args.db_config_csv_path) 
+    WRITE_TO_POSTGRES = str(args.write_to_postgres).lower()=='true'
 
-    # see if we are updating db
-    write_to_postgres = str(args.write_to_postgres).lower()=='true'
-    logger.info(f"fetching commod lists for options and futures")    
-
-    # get commodities to be processed
-    commods = args.contract_list.split(',')
-    # get dates to be processed for options, grouped by commod
-    print(f"geting dates to process for {OPTTAB} symols: {commods}")
-    dict_options_yyyymmdds_per_commod = get_dates_to_fetch(pga,OPTTAB,commods)
-    options_yyyymmdds_to_fetch = []
-    for yyyymmdds in dict_options_yyyymmdds_per_commod.values():
-        options_yyyymmdds_to_fetch.extend(yyyymmdds)
-    options_yyyymmdds_to_fetch = list(set(options_yyyymmdds_to_fetch))
     
+    # create a builder just so that you can get it's logger and it's pga instance
+    logger.info(f"fetching commod lists for options and futures")
+    opt_contract_list = get_commod_list_from_max_settle_date(pga,tablename=OPTTAB)
+    fut_contract_list = get_commod_list_from_max_settle_date(pga,tablename=FUTTAB)
+    
+    # get contract list of commod symbols (like CL and ES) for options and futures
+    # get first day to start upload
     df_all_options = None
-    for yyyymmdd in tqdm_notebook(options_yyyymmdds_to_fetch):
+    df_all_futures = None
+
+    yyyymmdds_to_fetch = get_dates_to_fetch(pga,OPTTAB)
+    for yyyymmdd in tqdm_notebook(yyyymmdds_to_fetch):
+#         yyyymmdd = year*100*100 + month*100 + day
         logger.info(f'executing options build for yyyymmdd {yyyymmdd} at {datetime.datetime.now()}')
 
         # build options
         try:
-            df_temp = build_daily(commod_code_list=commods,yyyymmdd=yyyymmdd)
+            df_temp = build_daily(commod_code_list=opt_contract_list,yyyymmdd=yyyymmdd,pga=pga)
             if df_all_options is None:
                 df_all_options = df_temp.copy()
             else:
@@ -354,16 +325,8 @@ if __name__=='__main__':
         except Exception as e:
             logger.warn(f'ERROR MAIN LOOP creating options: {str(e)}')
 
-    # get dates to be processed for futures
-    print(f"geting dates to process for {FUTTAB} symols: {commods}")
-    dict_futures_yyyymmdds_per_commod = get_dates_to_fetch(pga,FUTTAB,commods)            
-    futures_yyyymmdds_to_fetch = []
-    for yyyymmdds in dict_futures_yyyymmdds_per_commod.values():
-        futures_yyyymmdds_to_fetch.extend(yyyymmdds)
-    futures_yyyymmdds_to_fetch = list(set(futures_yyyymmdds_to_fetch))
-
-    df_all_futures = None
-    for yyyymmdd in tqdm_notebook(futures_yyyymmdds_to_fetch):
+    yyyymmdds_to_fetch = get_dates_to_fetch(pga,FUTTAB)
+    for yyyymmdd in tqdm_notebook(yyyymmdds_to_fetch):
         logger.info(f'executing futures build for yyyymmdd {yyyymmdd} at {datetime.datetime.now()}')
         # build futures
         # first get a list of commodity codes (like CL or ES) that are in the most recent day of the database
@@ -381,47 +344,26 @@ if __name__=='__main__':
                 df_all_futures.index = list(range(len(df_all_futures)))
         except Exception as e:
             logger.warn(f'ERROR MAIN LOOP creating futures: {str(e)}')
-    
-    # Now use dict_options_yyyymmdds_per_commod to get rid of those rows where the yyyymmdd for a commodity are already in the database
+
+    # write csv files
+    # NOW WRITE THIS DATA FOR THIS YEAR
     if df_all_options is not None:
-        df_all_options2 = pd.DataFrame()
-        for sym in dict_options_yyyymmdds_per_commod.keys():
-            good_yyyymmdds = dict_options_yyyymmdds_per_commod[sym]
-            c1 = df_all_options.symbol.str.slice(0,-3)==sym
-            c2 = df_all_options.settle_date.isin(good_yyyymmdds)
-            df_options_temp = df_all_options[(c1) & (c2)]
-            df_all_options2 = df_all_options2.append(df_options_temp,ignore_index=True)
-        # NOW WRITE THIS DATA FOR THIS YEAR
-        df_all_options2.to_csv(CSV_TEMP_PATH_OPTIONS,index=False)
-        if write_to_postgres:
+        df_all_options.to_csv(CSV_TEMP_PATH_OPTIONS,index=False)
+    # for futures only use those commod codes in fut_contract_list
+    if df_all_futures is not None:
+        df_all_futures = df_all_futures[df_all_futures.symbol.str[0:-3].isin(fut_contract_list)]
+        df_all_futures.to_csv(CSV_TEMP_PATH_FUTURES,index=False)
+
+
+
+    if WRITE_TO_POSTGRES:
+        if df_all_options is not None:
             logger.info(f"MAIN LOOP: writing options data to database")
             abspath = os.path.abspath(CSV_TEMP_PATH_OPTIONS)
-            psql_copy(pga,OPTTAB,abspath,logger,write_to_postgres=WRITE_TO_POSTGRES)
-
-    # Now use dict_futures_yyyymmdds_per_commod to get rid of those rows where the yyyymmdd for a commodity are already in the database
-    if df_all_futures is not None:        
-        df_all_futures2 = pd.DataFrame()
-        for sym in dict_futures_yyyymmdds_per_commod.keys():
-            good_yyyymmdds = dict_futures_yyyymmdds_per_commod[sym]
-            c1 = df_all_futures.symbol.str.slice(0,-3)==sym
-            c2 = df_all_futures.settle_date.isin(good_yyyymmdds)
-            df_futures_temp = df_all_futures[(c1) & (c2)]
-            df_all_futures2 = df_all_futures2.append(df_futures_temp,ignore_index=True)
-
-        # for futures only use those commod codes in fut_contract_list
-        df_all_futures2.to_csv(CSV_TEMP_PATH_FUTURES,index=False)
-        if write_to_postgres:
+            psql_copy(pga,OPTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
+        if df_all_futures is not None:
             logger.info(f"MAIN LOOP: writing futures data to database")
             abspath = os.path.abspath(CSV_TEMP_PATH_FUTURES)
-            psql_copy(pga,FUTTAB,abspath,logger,write_to_postgres=WRITE_TO_POSTGRES)
-
-    
+            psql_copy(pga,FUTTAB,abspath,write_to_postgres=WRITE_TO_POSTGRES,logger=logger)
 
 
-# In[ ]:
-
-
-get_ipython().system('jupyter nbconvert --to script step_03_options_futures_table_daily_loader.ipynb')
-
-
-# ### END

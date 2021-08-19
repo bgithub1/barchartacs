@@ -14,55 +14,41 @@
 # In[1]:
 
 
-import zipfile
-import glob
+# import zipfile
+# import glob
 import pandas as pd
 import numpy as np
-import pdb
-from argparse import ArgumentParser
-from argparse import RawDescriptionHelpFormatter
+
+# from argparse import ArgumentParser
+# from argparse import RawDescriptionHelpFormatter
 import sys
-import os
+# import os
 if  not './' in sys.path:
     sys.path.append('./')
 if  not '../' in sys.path:
     sys.path.append('../')
 
-from barchartacs import build_db
+# from barchartacs import build_db
 from barchartacs import db_info
-from barchartacs import plotly_utilities as pu
-from barchartacs import cme_expirations as cmeexp
-import plotly.graph_objs as go
-from plotly.offline import  init_notebook_mode, iplot
-init_notebook_mode(connected=True)
-import plotly.tools as tls
-from plotly.subplots import make_subplots
+# import plotly.graph_objs as go
+# from plotly.offline import  init_notebook_mode, iplot
+# init_notebook_mode(connected=True)
+# import plotly.tools as tls
 
-from plotly.graph_objs.layout import Font,Margin
-from IPython import display
+# from plotly.graph_objs.layout import Font,Margin
+# from IPython import display
 
 import datetime
-import io
+# import io
 from tqdm import tqdm,tqdm_notebook
-from barchartacs import pg_pandas as pg
+# from barchartacs import pg_pandas as pg
 import mibian
-import py_vollib
-import importlib
+# import py_vollib
 from py_vollib import black
 from py_vollib.black import implied_volatility
 import traceback
-import db_info
 MONTH_CODES = 'FGHJKMNQUVXZ'
 DICT_MONTH_NUMS = {MONTH_CODES[i]:i+1 for i in range(len(MONTH_CODES))}
-
-# importlib.reload(db_info)
-
-
-# In[2]:
-
-
-import warnings
-warnings.filterwarnings('ignore')
 
 
 # ### important global variables
@@ -74,7 +60,11 @@ warnings.filterwarnings('ignore')
 DEBUG_IT=False
 opttab = 'sec_schema.options_table'
 futtab = 'sec_schema.underlying_table'
-pga = db_info.get_db_info()
+config_name = None
+argvs = sys.argv
+if len(argvs)>1:
+    config_name = argvs[1]
+pga = db_info.get_db_info(config_name=config_name)
 SYMBOL_TO_RESEARCH = 'ES'
 STRIKE_DIVISORS = {}
 
@@ -89,7 +79,7 @@ df_expiry_dates_additions = pd.read_csv('live_option_expirations.csv')
 
 def _get_contract_number_from_symbol(symbol):
     c = symbol[0:2]
-    if c in ['CL','ES','NG']:
+    if c in ['CL','CB','ES','GE','NG']:
         return 2
     return 2
 
@@ -109,7 +99,7 @@ lam_mibian = lambda r:mibian.BS([r.close_y,r.strike,2,r.dte], callPrice=r.close_
 def get_implieds(df,df_expiry_dates,contract):
     df2 = df[['symbol','contract_num','pc','settle_date','strike','close_x','close_y']]
     df2 = df2[(((df2.pc=='C' )& (df2.strike>=df2.close_y)) | ((df2.pc=='P' ) & (df2.strike<df2.close_y)))  & (df2.symbol.str.contains(contract))]
-    cnum = _get_contract_number_from_symbol(contract)
+#     cnum = _get_contract_number_from_symbol(contract)
     df2 = df2[df2.contract_num==2]
     phigh = df2.close_y.max()
     plow = df2.close_y.min()
@@ -132,47 +122,38 @@ def get_implieds(df,df_expiry_dates,contract):
     df9 = df9[['symbol','settle_date','pc','contract_num','strike','close_x','close_y','dte']]
     df10 = df9.iloc[:len(df9)].copy()
     df10.index = list(range(len(df10)))
-    if USE_PYVOL:
-        df10['iv'] = df10.apply(lam_pyvol,axis=1)
-    else:
-        n = 100
-        for i in tqdm_notebook(np.arange(0,len(df10)-n,n)):
-                df10.loc[i:i+n,'iv'] = df10.loc[i:i+n].apply(lam_mibian,axis=1)
-        print(f'doing remaining {datetime.datetime.now()}')
-        i = df10[df10.iv.isna()].index[0]
-        df10.loc[i:,'iv'] = df10.loc[i:].apply(lam_mbian,axis=1)
-        print(f'done with remaining {datetime.datetime.now()}')
+    df10['iv'] = df10.apply(lam_pyvol,axis=1)
     return df10
 
 
-# #### example of using mibian for options calcs (we use py_vollib instead)
-
-# In[6]:
-
-
-def _test_mibian():
-    underlying=1.4565
-    strike=1.45
-    interest = 1
-    days=30
-    opt_info = [underlying,strike,interest,days]
-    c = mibian.BS(opt_info, volatility=20)
-    print(c.callPrice,
-    c.putPrice,
-    c.callDelta,
-    c.putDelta,
-    c.callDelta2,
-    c.putDelta2,
-    c.callTheta,
-    c.putTheta,
-    c.callRho,
-    c.putRho,
-    c.vega,
-    c.gamma)
-
-
-    co = mibian.BS(opt_info, callPrice=c.callPrice)
-    co.impliedVolatility
+# # #### example of using mibian for options calcs (we use py_vollib instead)
+# 
+# # In[6]:
+# 
+# 
+# def _test_mibian():
+#     underlying=1.4565
+#     strike=1.45
+#     interest = 1
+#     days=30
+#     opt_info = [underlying,strike,interest,days]
+#     c = mibian.BS(opt_info, volatility=20)
+#     print(c.callPrice,
+#     c.putPrice,
+#     c.callDelta,
+#     c.putDelta,
+#     c.callDelta2,
+#     c.putDelta2,
+#     c.callTheta,
+#     c.putTheta,
+#     c.callRho,
+#     c.putRho,
+#     c.vega,
+#     c.gamma)
+# 
+# 
+#     co = mibian.BS(opt_info, callPrice=c.callPrice)
+#     co.impliedVolatility
 
 
 # #### Show simple example of using py_vol package
@@ -195,9 +176,148 @@ def _test_py_vollib():
     discounted_call_price,ivpy,ivmn
 
 
+# In[8]:
+
+
+
+
+# # use this method to generate x/y scatter or bar graphs
+# def plotly_plot(df_in,x_column,plot_title=None,
+#                 y_left_label=None,y_right_label=None,
+#                 bar_plot=False,figsize=(16,10),
+#                 number_of_ticks_display=20,
+#                 yaxis2_cols=None,
+#                 x_value_labels=None):
+#     '''
+#     Return a plotly Figure that you can use with iplot, to produce
+#     multi-axis x/y scatter and bar graphs
+#     
+#     Example:
+# xvals = list(range(1,101))
+# y1vals = np.arange(101,201,1)
+# y2vals = np.arange(11,1,-.1)
+# y3vals = y2vals * .5
+#              
+# df = pd.DataFrame({'my_x_vals':xvals, 
+#                     'yvals_1':y1vals,
+#                     'yvals_2':y2vals,
+#                     'yvals_3':y3vals
+#                   })
+# fig = plotly_plot(df_in=df,x_column='my_x_vals',
+#                     plot_title = "example graph",
+#                     y_left_label='main y vals',
+#                     y_right_label='alt y vals',
+#                     yaxis2_cols = ['yvals_2','yvals_3'],
+#                     number_of_ticks_display=25)
+# iplot(fig)
+# 
+#     
+#     :param df_in: data frame with a single x, and multiple y values to graph
+#     :param x_column: the column in df_in that holds the x-axis values
+#     :param plot_title: title of plot 
+#     :param y_left_label:
+#     :param y_right_label:
+#     :param bar_plot: If True, plot bars, other wise, plot x/y scatter line
+#     :param figsize: 
+#     :param number_of_ticks_display: Number of x axis major ticks to display
+#     :param yaxis2_cols: the dataframe columns that hold the y values for the second y axis, if any
+#     :param x_value_labels: if you want alternate labels for the x axis, specify them here
+#     '''
+#     ya2c = [] if yaxis2_cols is None else yaxis2_cols
+#     ycols = [c for c in df_in.columns.values if c != x_column]
+#     # create tdvals, which will have x axis labels
+#     td = list(df_in[x_column]) 
+#     nt = len(df_in)-1 if number_of_ticks_display > len(df_in) else number_of_ticks_display
+#     spacing = len(td)//nt
+#     tdvals = td[::spacing]
+#     tdtext = tdvals
+#     if x_value_labels is not None:
+#         tdtext = [x_value_labels[i] for i in tdvals]
+#     
+#     # create data for graph
+#     data = []
+#     # iterate through all ycols to append to data that gets passed to go.Figure
+#     for ycol in ycols:
+#         if bar_plot:
+#             b = go.Bar(x=td,y=df_in[ycol],name=ycol,yaxis='y' if ycol not in ya2c else 'y2')
+#         else:
+#             b = go.Scatter(x=td,y=df_in[ycol],name=ycol,yaxis='y' if ycol not in ya2c else 'y2')
+#         data.append(b)
+# 
+#     # create a layout
+#     layout = go.Layout(
+#         title=plot_title,
+#         xaxis=dict(
+#             ticktext=tdtext,
+#             tickvals=tdvals,
+#             tickangle=45,
+#             type='category'),
+#         yaxis=dict(
+#             title='y main' if y_left_label is None else y_left_label
+#         ),
+#         yaxis2=dict(
+#             title='y alt' if y_right_label is None else y_right_label,
+#             overlaying='y',
+#             side='right'),
+#         margin=Margin(
+#             b=100
+#         )        
+#     )
+# 
+#     fig = go.Figure(data=data,layout=layout)
+#     return fig
+# 
+# def plotly_shaded_rectangles(beg_end_date_tuple_list,fig):
+#     ld_shapes = []
+#     for beg_end_date_tuple in beg_end_date_tuple_list:
+#         ld_beg = beg_end_date_tuple[0]
+#         ld_end = beg_end_date_tuple[1]
+#         ld_shape = dict(
+#             type="rect",
+#             # x-reference is assigned to the x-values
+#             xref="x",
+#             # y-reference is assigned to the plot paper [0,1]
+#             yref="paper",
+#             x0=ld_beg[i],
+#             y0=0,
+#             x1=ld_end[i],
+#             y1=1,
+#             fillcolor="LightSalmon",
+#             opacity=0.5,
+#             layer="below",
+#             line_width=0,
+#         )
+#         ld_shapes.append(ld_shape)
+# 
+#     fig.update_layout(shapes=ld_shapes)
+#     return fig
+# 
+# 
+# # In[10]:
+
+
+# xvals = list(range(1,101))
+# y1vals = np.arange(101,201,1)
+# y2vals = np.arange(11,1,-.1)
+# y3vals = y2vals * .5
+#              
+# df = pd.DataFrame({'my_x_vals':xvals, 
+#                     'yvals_1':y1vals,
+#                     'yvals_2':y2vals,
+#                     'yvals_3':y3vals
+#                   })
+# fig = plotly_plot(df_in=df,x_column='my_x_vals',
+#                     plot_title = "example graph",
+#                     y_left_label='main y vals',
+#                     y_right_label='alt y vals',
+#                     yaxis2_cols = ['yvals_2','yvals_3'],
+#                     number_of_ticks_display=25)
+# iplot(fig)
+
+
 # #### Define method to get a contract from postgres
 
-# In[8]:
+# In[11]:
 
 
 def _next_monthyear_code(contract):
@@ -213,12 +333,6 @@ def _next_monthyear_code(contract):
     next_code_val = MONTH_CODES[next_code_num-1]
     next_contract = contract[0:-3] + next_code_val + '%02d' %(next_y)
     return next_contract
-
-def get_symbol_expiries(df,symbol_col='symbol',is_option=True):
-    all_syms = df[symbol_col].unique()
-    all_expiries = [cmeexp.get_expiry(s,is_option=is_option) for s in all_syms]
-    all_expiries = [d.strftime('%Y%m%d') for d in all_expiries]
-    return pd.DataFrame({'symbol':all_syms,'settle_date':all_expiries})
 
 def get_postgres_data(contract,strike_divisor=None):
     '''
@@ -252,14 +366,12 @@ def get_postgres_data(contract,strike_divisor=None):
     dfu = dfu.rename(columns={'symbol':'u_symbol'})
     df = dfo.merge(dfu,how='inner',on=['settle_date'])
     # Get options expiration dates
-#     df_expiry_dates = dfo[['symbol','settle_date']].groupby('symbol',as_index=False).max()
-#     df_expiry_dates = dfo[['symbol','settle_date']]
-#     df_additions = df_expiry_dates_additions[df_expiry_dates_additions.symbol==contract]
-#     df_additions = df_additions[['symbol','yyyymmdd_option']].rename(columns={'yyyymmdd_option':'settle_date'})
-#     additional_symbols = df_additions.symbol.values
-#     df_expiry_dates = df_expiry_dates[~df_expiry_dates.symbol.isin(additional_symbols)]
-#     df_expiry_dates = df_expiry_dates.append(df_additions).sort_values('symbol').copy()
-    df_expiry_dates = get_symbol_expiries(dfo)
+    df_expiry_dates = dfo[['symbol','settle_date']].groupby('symbol',as_index=False).max()
+    df_additions = df_expiry_dates_additions[df_expiry_dates_additions.symbol==contract]
+    df_additions = df_additions[['symbol','yyyymmdd_option']].rename(columns={'yyyymmdd_option':'settle_date'})
+    additional_symbols = df_additions.symbol.values
+    df_expiry_dates = df_expiry_dates[~df_expiry_dates.symbol.isin(additional_symbols)]
+    df_expiry_dates = df_expiry_dates.append(df_additions).sort_values('symbol').copy()
     if strike_divisor is not None:
         df.strike = df.strike/strike_divisor
     return df,df_expiry_dates
@@ -269,7 +381,8 @@ def get_postgres_data(contract,strike_divisor=None):
 
 # #### Add in even "amount in/out the money strikes, and interpolate their implied vols and skews
 
-# In[9]:
+# In[12]:
+
 
 
 def get_even_moneyness_strikes(df10):
@@ -326,30 +439,22 @@ def get_even_moneyness_strikes(df10):
 
     df12 = df12.merge(df12_atm,on=['symbol','settle_date','pc'],how='inner')
 
+#     df12 = df12.merge(df12_atm,on=['symbol','settle_date'],how='inner')
+#     df12['pc'] = np.nan
+
     df12.moneyness = df12.moneyness.round(4)
     df12['vol_skew'] = (df12.iv - df12.atm_iv).round(4)
     return df12
 
 
-# #### get all contracts in the options database
-
-# In[10]:
-
-
-all_contracts = pga.get_sql(f"select distinct symbol from {opttab} where symbol~'^{SYMBOL_TO_RESEARCH}'").sort_values('symbol').values.reshape(-1)
-len(all_contracts)
-
-
-# #### show last dates
-
-# In[11]:
+# # #### get all contracts in the options database
+# all_contracts = pga.get_sql(f"select distinct symbol from {opttab} where symbol~'^{SYMBOL_TO_RESEARCH}'").sort_values('symbol').values.reshape(-1)
+# len(all_contracts)
 
 
 def create_skew_per_date_df(df):
     '''
     Find the first settle_date whose count of rows is equal to max count of rows.
-    df: DataFrame from df_iv_final_SS.csv, where SS is like ES, CL, NG, etc.
-         df contains data for ONLY ONE SYMBOL
     '''
     # get the first symbol (which should be the only symbol)
     contract = df.symbol.unique()[0]
@@ -385,7 +490,7 @@ def create_skew_per_date_df(df):
 
 # ### Skew per contract
 
-# In[12]:
+# In[16]:
 
 
 def skew_per_symbol(symbol,strike_divisor=None):
@@ -420,84 +525,80 @@ def skew_per_symbol(symbol,strike_divisor=None):
     return df_iv,df_skew,_exception,_stacktrace
 
 
-# ### Show contracts
+
 
 # ## MAIN LOOP
 # #### Loop through all contracts and create DataFrames for implied vol and skew (`df_iv_final` and `df_iv_skew`)
 
-# In[13]:
+# In[24]:
+def cash_futures_to_csv(sym):
+    cash_sql = f"select * from sec_schema.underlying_table where symbol='{sym}Z99';"
+    df_cash_futures = pga.get_sql(cash_sql)
+    print(len(df_cash_futures))
+    df_cash_futures.to_csv(f'./temp_folder/df_cash_futures_{sym}.csv',index=False)
+    return df_cash_futures
 
+for sym_to_res in tqdm(['ES','CL','CB','NG']):
+    SYMBOL_TO_RESEARCH = sym_to_res
+    print(f"processing commodity: {SYMBOL_TO_RESEARCH}")
+    all_contracts = pga.get_sql(f"select distinct symbol from {opttab} where symbol~'^{SYMBOL_TO_RESEARCH}'").sort_values('symbol').values.reshape(-1)
+    strike_div = None if SYMBOL_TO_RESEARCH not in STRIKE_DIVISORS.keys() else STRIKE_DIVISORS[SYMBOL_TO_RESEARCH]
+    df_iv_final = None
+    df_iv_skew = None
+    dict_exceptions = {}
+    dict_stacktraces = {}
+    contracts = all_contracts
+    if SYMBOL_TO_RESEARCH in ['ES','GE']:
+        contracts = [c for c in all_contracts if c[-3] in ['H','M','U','Z']]
+    contracts_ssyym = sorted([c[0:2] + c[-2:] + c[2] for c in contracts])
+#     for contract in tqdm(contracts):
+    for ssyym in tqdm(contracts_ssyym):
+#         if ssyym < 'ES21M':
+#             continue
+        contract = ssyym[0:2] + ssyym[-1] + ssyym[2:4]
+        df12,df_skew,_exception,_stacktrace = skew_per_symbol(contract,strike_divisor=strike_div)
+        if _exception is not None:
+            dict_exceptions[contract] = _exception
+            dict_stacktraces[contract] = _stacktrace
+            continue
 
-if __name__=='__main__':
-    for sym_to_res in tqdm_notebook(['ES','CL','NG']):
-        SYMBOL_TO_RESEARCH = sym_to_res
-        print(f"processing commodity: {SYMBOL_TO_RESEARCH}")
-        all_contracts = pga.get_sql(f"select distinct symbol from {opttab} where symbol~'^{SYMBOL_TO_RESEARCH}'").sort_values('symbol').values.reshape(-1)
-        strike_div = None if SYMBOL_TO_RESEARCH not in STRIKE_DIVISORS.keys() else STRIKE_DIVISORS[SYMBOL_TO_RESEARCH]
-        df_iv_final = None
-        df_iv_skew = None
-        dict_exceptions = {}
-        dict_stacktraces = {}
-        contracts = all_contracts
-        if SYMBOL_TO_RESEARCH in ['ES','GE']:
-            contracts = [c for c in all_contracts if c[-3] in ['H','M','U','Z']]
-        for contract in tqdm_notebook(contracts):
-            df12,df_skew,_exception,_stacktrace = skew_per_symbol(contract,strike_divisor=strike_div)
-            if _exception is not None:
-                dict_exceptions[contract] = _exception
-                dict_stacktraces[contract] = _stacktrace
-                continue
+        if (df12 is None or len(df12)<1) or (df_skew is None or len(df_skew)<1):
+            if (df12 is None or len(df12)<1):
+                dict_exceptions[contract] = "No data returned for df in skew_per_symbol"
+            if (df_skew is None or len(df_skew)<1):
+                dict_exceptions[contract] = "No data returned for df_skew in skew_per_symbol"
+            continue
+        if df12 is not None:
+            if df_iv_final is None:
+                df_iv_final = df12.copy()
+            else:
+                df_iv_final = df_iv_final.append(df12,ignore_index=True)
+            if df_iv_skew is None:
+                df_iv_skew = df_skew.copy()
+            else:
+                df_iv_skew = df_iv_skew.append(df_skew,ignore_index=True)
+                df_iv_skew.index = list(range(len(df_iv_skew)))
 
-            if (df12 is None or len(df12)<1) or (df_skew is None or len(df_skew)<1):
-                if (df12 is None or len(df12)<1):
-                    dict_exceptions[contract] = "No data returned for df in skew_per_symbol"
-                if (df_skew is None or len(df_skew)<1):
-                    dict_exceptions[contract] = "No data returned for df_skew in skew_per_symbol"
-                continue
-            if df12 is not None:
-                if df_iv_final is None:
-                    df_iv_final = df12.copy()
-                else:
-                    df_iv_final = df_iv_final.append(df12,ignore_index=True)
-                if df_iv_skew is None:
-                    df_iv_skew = df_skew.copy()
-                else:
-                    df_iv_skew = df_iv_skew.append(df_skew,ignore_index=True)
-                    df_iv_skew.index = list(range(len(df_iv_skew)))
-
-        df_iv_final = df_iv_final.sort_values(['settle_date','moneyness'])
-        print(dict_exceptions)
-        df_iv_final.to_csv(f'./temp_folder/df_iv_final_{SYMBOL_TO_RESEARCH}.csv',index=False)
-        df_iv_skew.to_csv(f'./temp_folder/df_iv_skew_{SYMBOL_TO_RESEARCH}.csv',index=False)    
-
-
-# ### save to csv and print any exceptions that might have occured
-
-# In[14]:
-
-
+    df_iv_final = df_iv_final.sort_values(['settle_date','moneyness'])
+    print(dict_exceptions)
+#     df_iv_final.to_csv(f'./temp_folder/df_iv_final_{SYMBOL_TO_RESEARCH}.csv',index=False)
+#     df_iv_skew.to_csv(f'./temp_folder/df_iv_skew_{SYMBOL_TO_RESEARCH}.csv',index=False)    
+    cash_futures_to_csv(SYMBOL_TO_RESEARCH)
+    
+# # ### save to csv and print any exceptions that might have occured
+# 
+# # In[19]:
+# 
+# 
 # print(dict_exceptions)
 # df_iv_final.to_csv(f'./temp_folder/df_iv_final_{SYMBOL_TO_RESEARCH}.csv',index=False)
 # df_iv_skew.to_csv(f'./temp_folder/df_iv_skew_{SYMBOL_TO_RESEARCH}.csv',index=False)
-
-
-# # CODE ENDS HERE FOR BUILD
-
-# In[15]:
-
-
-# !jupyter nbconvert --to script step_04_build_df_iv_skew_csvs.ipynb
-
-
-# ## END
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
+# 
+# 
+# # # CODE ENDS HERE FOR BUILD
+# 
+# 
+# # In[ ]:
 
 
 
