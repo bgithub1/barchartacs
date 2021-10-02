@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[4]:
+# ### Redis server to support Dashapps in this folder
+
+# ## IF YOU WANT TO SEE WARNINGS, COMMENT THIS OUT
+
+# In[1]:
 
 
 import warnings
@@ -41,16 +45,11 @@ import tqdm
 
 import schedule_it#@UnresolvedImport
 
-
-# In[5]:
-
-
 redis_port = 6379
 redis_db = redis.Redis(host = 'localhost',port=6379,db=0)
 
 
-# In[7]:
-
+# #### Step 01: define important functions that are used below
 
 def dt_to_yyyymmdd(d):
     return int(d.year)*100*100 + int(d.month)*100 + int(d.day)
@@ -72,6 +71,7 @@ def str_to_date(d,sep='-'):
 
 
 def fetch_history(symbol,dt_beg,dt_end):
+#     df = pdr.DataReader(symbol, 'yahoo', dt_beg, dt_end)
     df = yf.download(symbol, dt_beg, dt_end,threads=False)
     # move index to date column, sort and recreate index
     df['date'] = df.index
@@ -85,28 +85,17 @@ def fetch_history(symbol,dt_beg,dt_end):
     df['settle_date'] = df.date.apply(str_to_yyyymmdd)
     return df
 
-def get_port_info_values(syms):
-    names = syms if type(syms)==list else syms.tolist()
-    tickers = yf.Tickers(names)
-    dict_list = []
-    for n in tqdm.tqdm(names):
-        d = tickers.tickers[n].get_info()
-        d['symbol'] = n
-        dict_list.append(d)
-    df_info_values = pd.DataFrame(dict_list)
-    return df_info_values
-    
 def update_wf_port_info(syms):
     try:
-#         names = syms if type(syms)==list else syms.tolist()
-#         tickers = yf.Tickers(names)
-#         dict_list = []
-#         for n in tqdm.tqdm(names):
-#             d = tickers.tickers[n].get_info()
-#             d['symbol'] = n
-#             dict_list.append(d)
-#         df_info_values = pd.DataFrame(dict_list)
-        df_info_values = get_port_info_values(syms)
+        names = syms if type(syms)==list else syms.tolist()
+        tickers = yf.Tickers(names)
+        dict_list = []
+        for n in tqdm.tqdm(names):
+#             dict_list.append(tickers.tickers[n].get_info())
+            d = tickers.tickers[n].get_info()
+            d['symbol'] = n
+            dict_list.append(d)
+        df_info_values = pd.DataFrame(dict_list)
         info_values_key = 'wf_port_info_csv'
         update_redis_df(info_values_key,df_info_values)
     except Exception as e:
@@ -150,6 +139,10 @@ def update_db(beg_sym=None,port_path=None):
         
     update_wf_port_info(syms)
 
+
+# In[6]:
+
+
 def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None):
     logger = schedule_it.init_root_logger("logfile.log", "INFO")
     while True:
@@ -159,7 +152,9 @@ def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None):
         logger.info(f"updating history")
         update_db(beg_sym=beg_sym,port_path=port_path)
         logger.info(f"sleeping until next {t} {unit} before next scheduling")
+#         time.sleep(60*60)
         time.sleep(5*60)
+    
 
 
 # In[ ]:
@@ -173,8 +168,10 @@ if __name__=='__main__':
     schedule_updates(t=t,unit=unit,beg_sym=bs,port_path=port_path)
 
 
+# ## END
+
 # In[ ]:
 
 
-# !jupyter nbconvert --to script redis_server_stock_data_update.ipynb
+
 
