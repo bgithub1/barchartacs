@@ -19,7 +19,7 @@ import time
 import tqdm
 
 
-# In[19]:
+# In[25]:
 
 
 def dt_to_yyyymmdd(d):
@@ -88,7 +88,7 @@ def get_yahoo_history_from_list(
         if use_tqdm:
             _syms.set_postfix_str(s=sym)    
         try:
-            df = fetch_history(sym,data_beg_date, data_end_date)
+            df = fetch_history(sym,beg_dt, end_dt)
             if len(df)>0:
                 df_all = df_all.append(df,ignore_index=True)
             else:
@@ -166,10 +166,22 @@ if __name__=='__main__':
 
 
 
-# In[18]:
+# In[27]:
 
 
 # !jupyter nbconvert --to script yahoofinance.ipynb
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:

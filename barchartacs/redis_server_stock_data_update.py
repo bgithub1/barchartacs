@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[4]:
+# In[26]:
 
 
 import warnings
@@ -42,14 +42,14 @@ import tqdm
 import schedule_it#@UnresolvedImport
 
 
-# In[5]:
+# In[27]:
 
 
 redis_port = 6379
 redis_db = redis.Redis(host = 'localhost',port=6379,db=0)
 
 
-# In[7]:
+# In[28]:
 
 
 def dt_to_yyyymmdd(d):
@@ -83,6 +83,7 @@ def fetch_history(symbol,dt_beg,dt_end):
     cols_dict = {c:c[0].lower() + c[1:] for c in cols}
     df = df.rename(columns = cols_dict)
     df['settle_date'] = df.date.apply(str_to_yyyymmdd)
+    df = df.groupby('settle_date',as_index=False).first()
     return df
 
 def get_port_info_values(syms):
@@ -150,31 +151,71 @@ def update_db(beg_sym=None,port_path=None):
         
     update_wf_port_info(syms)
 
-def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None):
+def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None,num_runs=None):
     logger = schedule_it.init_root_logger("logfile.log", "INFO")
+    counter = num_runs
     while True:
         logger.info(f"scheduling update for {unit} {t}")
         sch = schedule_it.ScheduleNext(unit, t,logger = logger)
         sch.wait()
         logger.info(f"updating history")
         update_db(beg_sym=beg_sym,port_path=port_path)
+        if counter is not None:
+            counter = counter - 1
+            if counter <=0:
+                return
         logger.info(f"sleeping until next {t} {unit} before next scheduling")
         time.sleep(5*60)
 
 
-# In[ ]:
+# In[22]:
+
+
+data_end_date = datetime.datetime.now()
+data_beg_date = data_end_date - relativedelta(years=5)
+
+# fetch_history()
+
+
+# In[23]:
+
+
+# df2 = fetch_history('FB',data_beg_date, data_end_date)
+# df2
+
+
+# In[24]:
+
+
+# sys.argv = ['','56','A','../../jupyter_notebooks/wf_port.csv','minute']  
+
+
+# In[22]:
 
 
 if __name__=='__main__':
-    t = 20 if len(sys.argv)<2 else int(sys.argv[1])
+    t = 20 if len(sys.argv)<3 else int(sys.argv[1])
     bs = None if len(sys.argv)<3 else sys.argv[2]
     port_path = None if len(sys.argv)<4 else sys.argv[3]
     unit = 'hour' if len(sys.argv)<5 else sys.argv[4]
-    schedule_updates(t=t,unit=unit,beg_sym=bs,port_path=port_path)
+    num_runs = 100 if len(sys.argv)<6 else int(sys.argv[5])
+    schedule_updates(t=t,unit=unit,beg_sym=bs,port_path=port_path,num_runs=num_runs)
+
+
+# In[25]:
+
+
+# !jupyter nbconvert --to script redis_server_stock_data_update.ipynb
 
 
 # In[ ]:
 
 
-# !jupyter nbconvert --to script redis_server_stock_data_update.ipynb
+
+
+
+# In[ ]:
+
+
+
 

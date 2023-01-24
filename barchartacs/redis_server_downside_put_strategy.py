@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
 # ### Redis server to support Dashapps in this folder
 
 # ## IF YOU WANT TO SEE WARNINGS, COMMENT THIS OUT
 
-# In[1]:
+# %%
 
 
 import warnings
 warnings.filterwarnings("ignore")
 
 
-# In[2]:
+# %%
 
 
 import pandas as pd
@@ -42,7 +43,7 @@ from py_vollib.black import implied_volatility
 import ipdb,pdb
 import traceback
 
-import pandas_datareader.data as pdr
+# import pandas_datareader.data as pdr
 import yfinance as yf
 
 from scipy.stats import norm
@@ -53,7 +54,7 @@ import redis
 import time
 import schedule_it#@UnresolvedImport
 
-# In[3]:
+# %%
 
 
 redis_port = 6379
@@ -62,7 +63,7 @@ redis_db = redis.Redis(host = 'localhost',port=6379,db=0)
 
 # #### Step 01: define important functions that are used below
 
-# In[4]:
+# %%
 
 
 def dt_to_yyyymmdd(d):
@@ -106,7 +107,7 @@ def update_redis_df(key,df):
 
 # #### Step 02: get Initial Data
 
-# In[5]:
+# %%
 
 
 def update_db():
@@ -153,7 +154,7 @@ def update_db():
     
 
 
-# In[6]:
+# %%
 
 
 def schedule_updates(h=8):
@@ -169,7 +170,7 @@ def schedule_updates(h=8):
     
 
 
-# In[ ]:
+# %%
 
 
 if __name__=='__main__':
@@ -180,7 +181,7 @@ if __name__=='__main__':
 
 # ## END
 
-# In[ ]:
+# %%
 
 
 

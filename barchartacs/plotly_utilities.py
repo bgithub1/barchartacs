@@ -249,13 +249,6 @@ def plotly_plot(df_in,x_column,plot_title=None,
     data = []
     # iterate through all ycols to append to data that gets passed to go.Figure
 
-#     for ycol in ycols:
-#         if bar_plot:
-#             b = go.Bar(x=td,y=df_in[ycol],name=ycol,yaxis='y' if ycol not in ya2c else 'y2')
-#         else:
-#             b = go.Scatter(x=td,y=df_in[ycol],name=ycol,yaxis='y' if ycol not in ya2c else 'y2')
-#         data.append(b)
-
     # determine if each ycol is of type go.Bar, go.Scatter, etc
     # pfs = "plot functions"
     pfs = go_functions
