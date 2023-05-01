@@ -6,7 +6,7 @@ tqdm==4.46.0
 pyarrow==0.17.1
 scipy==1.4.1
 dash==1.14.0
-Flask==1.1.2
+Flask==2.3.2
 plotly==4.6.0
 dash_core_components==1.10.2
 dash_extensions==0.0.26
