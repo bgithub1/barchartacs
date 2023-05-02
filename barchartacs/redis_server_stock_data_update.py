@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
-# In[26]:
+# %%
 
 
 import warnings
 warnings.filterwarnings("ignore")
 
 
-# In[2]:
+# %%
 
 
 import pandas as pd
@@ -42,14 +43,14 @@ import tqdm
 import schedule_it#@UnresolvedImport
 
 
-# In[27]:
+# %%
 
 
 redis_port = 6379
 redis_db = redis.Redis(host = 'localhost',port=6379,db=0)
 
 
-# In[28]:
+# %%
 
 
 def dt_to_yyyymmdd(d):
@@ -134,7 +135,7 @@ def update_db(beg_sym=None,port_path=None):
         df_sp_members = df_sp_members.sort_values('Symbol')
         if beg_sym is not None:
             df_sp_members = df_sp_members[df_sp_members.Symbol>=beg_sym]
-            syms = df_sp_members.Symbol.values
+        syms = df_sp_members.Symbol.values
     syms = np.append(syms,['SPY','QQQ'])
     data_end_date = datetime.datetime.now()
     data_beg_date = data_end_date - relativedelta(years=5)
@@ -168,7 +169,7 @@ def schedule_updates(t=8,unit='hour',beg_sym=None,port_path=None,num_runs=None):
         time.sleep(5*60)
 
 
-# In[22]:
+# %%
 
 
 data_end_date = datetime.datetime.now()
@@ -177,24 +178,24 @@ data_beg_date = data_end_date - relativedelta(years=5)
 # fetch_history()
 
 
-# In[23]:
+# %%
 
 
 # df2 = fetch_history('FB',data_beg_date, data_end_date)
 # df2
 
 
-# In[24]:
+# %%
 
 
 # sys.argv = ['','56','A','../../jupyter_notebooks/wf_port.csv','minute']  
 
 
-# In[22]:
+# %%
 
 
 if __name__=='__main__':
-    t = 20 if len(sys.argv)<3 else int(sys.argv[1])
+    t = 20 if len(sys.argv)<2 else int(sys.argv[1])
     bs = None if len(sys.argv)<3 else sys.argv[2]
     port_path = None if len(sys.argv)<4 else sys.argv[3]
     unit = 'hour' if len(sys.argv)<5 else sys.argv[4]
@@ -202,19 +203,19 @@ if __name__=='__main__':
     schedule_updates(t=t,unit=unit,beg_sym=bs,port_path=port_path,num_runs=num_runs)
 
 
-# In[25]:
+# %%
 
 
 # !jupyter nbconvert --to script redis_server_stock_data_update.ipynb
 
 
-# In[ ]:
+# %%
 
 
 
 
 
-# In[ ]:
+# %%
 
 
 
